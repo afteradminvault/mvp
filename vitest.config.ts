@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    exclude: ["**/node_modules/**", "src/**/*.integration.test.ts"],
     // Dummy-but-valid values so importing src/config/env.ts doesn't throw at
     // module-load time (its eager, fail-fast-at-startup validation is
     // intentional for the real app — see env.ts). env.test.ts itself never

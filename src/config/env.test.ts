@@ -58,4 +58,20 @@ describe("parseServerEnv", () => {
       /NEXT_PUBLIC_SUPABASE_URL/,
     );
   });
+
+  it("does not require RESEND_API_KEY or OPENAI_API_KEY (config-only, unwired at Milestone 0)", () => {
+    expect(parseServerEnv(validServerEnv)).toEqual(validServerEnv);
+  });
+
+  it("throws if RESEND_API_KEY is present but empty", () => {
+    expect(() =>
+      parseServerEnv({ ...validServerEnv, RESEND_API_KEY: "" }),
+    ).toThrow(/RESEND_API_KEY/);
+  });
+
+  it("throws if OPENAI_API_KEY is present but empty", () => {
+    expect(() =>
+      parseServerEnv({ ...validServerEnv, OPENAI_API_KEY: "" }),
+    ).toThrow(/OPENAI_API_KEY/);
+  });
 });

@@ -29,6 +29,9 @@ export default async function EstatesPage() {
           <Link href="/estates/new" className="text-sm underline">
             + New estate
           </Link>
+          <Link href="/account/mfa" className="text-sm underline">
+            Two-factor auth
+          </Link>
           <SignOutButton />
         </div>
       </div>

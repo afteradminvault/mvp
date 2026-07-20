@@ -13,6 +13,14 @@ const clientEnvSchema = z.object({
 
 const serverOnlyEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Scaffolded per docs/DEVELOPMENT_ROADMAP.md Milestone 0 / docs/TECH_STACK.md —
+  // optional because no feature reads either yet: RESEND_API_KEY is used only by
+  // the manual test-send script until Milestone 1's notification templates land,
+  // and OPENAI_API_KEY is config-only for Phase 2 (PRD §3.2), not wired to any
+  // route. Neither should block server startup for developers who haven't set
+  // them, unlike SUPABASE_SERVICE_ROLE_KEY, which every server code path needs.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
