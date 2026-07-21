@@ -2,9 +2,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstateNotFoundError, EstateService } from "@/domain/estates/estate-service";
 import { SupabaseEstateRepository } from "@/infrastructure/estates/supabase-estate-repository";
+import { AssetService } from "@/domain/assets/asset-service";
+import { SupabaseDigitalAssetRepository } from "@/infrastructure/assets/supabase-asset-repository";
+import { MembershipService } from "@/domain/membership/membership-service";
+import { SupabaseMembershipRepository } from "@/infrastructure/membership/supabase-membership-repository";
+import { ReadinessService } from "@/domain/readiness/readiness-service";
+import { SupabaseReadinessRepository } from "@/infrastructure/readiness/supabase-readiness-repository";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
 import { CheckInButton } from "./check-in-button";
 import { EditEstateForm } from "./edit-estate-form";
+import { ReadinessCard } from "./readiness-card";
 
 export default async function EstateDetailPage({
   params,
@@ -28,6 +35,16 @@ export default async function EstateDetailPage({
     throw error;
   });
 
+  const assetService = new AssetService(new SupabaseDigitalAssetRepository(supabase));
+  const membershipService = new MembershipService(new SupabaseMembershipRepository(supabase));
+  const readinessService = new ReadinessService(new SupabaseReadinessRepository(supabase));
+
+  const [assets, members, readinessScore] = await Promise.all([
+    assetService.listAssets(id),
+    membershipService.listMembers(id),
+    readinessService.getReadinessScore(id),
+  ]);
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-2xl font-semibold">{estate.displayName}</h1>
@@ -44,12 +61,61 @@ export default async function EstateDetailPage({
 
       <div className="mt-6 flex items-center gap-4">
         <CheckInButton estateId={estate.id} />
-        <Link href={`/estates/${estate.id}/assets`} className="text-sm underline">
-          Digital assets &rarr;
+      </div>
+
+      <div className="mt-8">
+        <ReadinessCard score={readinessScore} />
+      </div>
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-medium">Digital assets</h2>
+          <Link href={`/estates/${id}/assets`} className="text-sm underline">
+            Manage &rarr;
+          </Link>
+        </div>
+        {assets.length === 0 ? (
+          <p className="text-sm text-gray-600">No assets added yet.</p>
+        ) : (
+          <>
+            <p className="mb-2 text-sm text-gray-600">
+              {assets.length} asset{assets.length === 1 ? "" : "s"}
+            </p>
+            <ul className="flex flex-col gap-1 text-sm">
+              {assets.slice(0, 5).map((asset) => (
+                <li key={asset.id}>
+                  {asset.customProviderName ?? asset.providerId ?? "Unnamed asset"} &middot; {asset.category}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <Link
+          href={`/estates/${id}/assets`}
+          className="mt-3 inline-block rounded bg-black px-3 py-1.5 text-sm text-white"
+        >
+          Manage your vault
         </Link>
-        <Link href={`/estates/${estate.id}/members`} className="text-sm underline">
-          Executors &amp; Helpers &rarr;
-        </Link>
+      </div>
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-medium">Executors &amp; Helpers</h2>
+          <Link href={`/estates/${id}/members`} className="text-sm underline">
+            Manage &rarr;
+          </Link>
+        </div>
+        {members.length === 0 ? (
+          <p className="text-sm text-gray-600">No one has been nominated yet.</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-sm">
+            {members.map((member) => (
+              <li key={member.id}>
+                {member.inviteEmail} &middot; {member.role} &middot; {member.inviteStatus}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-6">
