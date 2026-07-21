@@ -79,6 +79,9 @@ Platform accounts. If the eventual auth provider (see Tech Stack doc) supplies i
 | created_at | timestamptz NOT NULL DEFAULT now() | |
 | updated_at | timestamptz NOT NULL DEFAULT now() | |
 | deleted_at | timestamptz NULL | soft-delete for account closure with undelete grace window (PRD §non-goals doesn't cover this, but retention policy requires it — see Security Architecture §5) |
+| public_key | bytea NULL | X25519 public key, generated client-side once per account the first time this person accepts an Executor/Helper nomination on *any* estate — reusable across every estate they're a member of, since a keypair belongs to the account, not a specific membership (Security Architecture §1.4, resolved). Not secret. |
+| wrapped_private_key | bytea NULL | the matching X25519 private key, wrapped under this account's own password-derived key (same KDF as the Owner's VK-wrapping key) — never sent or stored in plaintext. |
+| kdf_salt | bytea NULL | the single Argon2id salt for this account's password-derived wrapping key, reused for both purposes it ever serves: wrapping this user's own Vault Key copy directly (as an Owner) and/or wrapping `wrapped_private_key` (as an Executor/Helper). |
 
 **Indexes**: unique btree on `email` (lookup on login; uniqueness constraint). btree on `deleted_at` (partial, `WHERE deleted_at IS NOT NULL`) to efficiently sweep for hard-deletion after the grace window.
 
@@ -127,7 +130,7 @@ The RBAC backbone — see §0. Also the primary reference for RLS policies (Secu
 | invited_at | timestamptz NOT NULL DEFAULT now() | |
 | accepted_at | timestamptz NULL | |
 | fallback_order | int NULL | executor fallback chain (PRD §7 open question — nullable until that's confirmed in scope) |
-| wrapped_key_share | bytea NULL | opaque-to-application-logic key-recovery material; populated on invite acceptance, consumed at executor onboarding. See Security Architecture §1 — this column stores ciphertext the app never interprets |
+| wrapped_vault_key | bytea NULL | this member's wrapped copy of the estate's Vault Key (renamed from `wrapped_key_share` — Security Architecture §1.4, resolved). For an `owner` row: the VK wrapped directly under the Owner's own password-derived key. For an `executor` row (primary or Backup, per `fallback_order`): the VK sealed under that member's `users.public_key`. Opaque ciphertext the app never interprets. |
 | created_at | timestamptz NOT NULL DEFAULT now() | |
 
 **Indexes**: btree on `estate_id` (every RLS check and every "who's on this estate" query starts here — this is the single most latency-sensitive index in the schema, since it's evaluated on effectively every request touching estate-scoped data). unique btree on `(estate_id, user_id)` WHERE `user_id IS NOT NULL` (a user can't hold two membership rows on the same estate). **Partial unique index on `(estate_id)` WHERE `role = 'owner'`** — enforces exactly one Owner per estate at the database level, not just app logic, because this is a security invariant worth having the database itself guarantee.
