@@ -6,6 +6,7 @@ import type {
   MfaFactor,
   TotpEnrollment,
 } from "@/domain/auth/ports";
+import { clientEnv } from "@/config/env";
 
 /**
  * Concrete implementation of the AuthRepository port against a real
@@ -21,7 +22,18 @@ export class SupabaseAuthRepository implements AuthRepository {
     const { data, error } = await this.supabase.auth.signUp({
       email: params.email,
       password: params.password,
-      options: { data: { display_name: params.displayName } },
+      options: {
+        data: { display_name: params.displayName },
+        // Explicit, not left to Supabase's dashboard-configured Site URL
+        // default — that setting is one value for the whole project, so it
+        // silently points at whatever was last configured (e.g. localhost
+        // during local dev) regardless of which environment the signup
+        // actually happened in. This makes the confirmation link land back
+        // on the environment that issued it. Still requires this exact URL
+        // to be in Supabase's Redirect URLs allowlist (Authentication ->
+        // URL Configuration), or Supabase rejects it.
+        emailRedirectTo: `${clientEnv.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      },
     });
     if (error) throw error;
     if (!data.user) throw new Error("Sign-up succeeded but no user was returned.");
