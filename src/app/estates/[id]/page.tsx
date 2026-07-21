@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstateNotFoundError, EstateService } from "@/domain/estates/estate-service";
 import { SupabaseEstateRepository } from "@/infrastructure/estates/supabase-estate-repository";
@@ -41,8 +42,11 @@ export default async function EstateDetailPage({
         <dd>{new Date(estate.lastCheckInAt).toLocaleString()}</dd>
       </dl>
 
-      <div className="mt-6">
+      <div className="mt-6 flex items-center gap-4">
         <CheckInButton estateId={estate.id} />
+        <Link href={`/estates/${estate.id}/assets`} className="text-sm underline">
+          Digital assets &rarr;
+        </Link>
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-6">

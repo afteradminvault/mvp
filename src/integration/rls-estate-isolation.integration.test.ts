@@ -50,8 +50,10 @@ async function signedInClient(email: string, password: string): Promise<Supabase
 describe("RLS: estate isolation between unrelated users", () => {
   let userA: { id: string; email: string; password: string };
   let userB: { id: string; email: string; password: string };
+  let userC: { id: string; email: string; password: string };
   let clientA: SupabaseClient;
   let clientB: SupabaseClient;
+  let clientC: SupabaseClient;
   let estateAId: string;
   let estateBId: string;
   let assetAId: string;
@@ -60,8 +62,10 @@ describe("RLS: estate isolation between unrelated users", () => {
   beforeAll(async () => {
     userA = await createConfirmedTestUser();
     userB = await createConfirmedTestUser();
+    userC = await createConfirmedTestUser();
     clientA = await signedInClient(userA.email, userA.password);
     clientB = await signedInClient(userB.email, userB.password);
+    clientC = await signedInClient(userC.email, userC.password);
 
     const { data: jurisdiction, error: jurisdictionError } = await adminClient
       .from("jurisdictions")
@@ -93,15 +97,32 @@ describe("RLS: estate isolation between unrelated users", () => {
       .single();
     if (assetError) throw assetError;
     assetAId = asset.id;
+
+    // userC is an accepted Executor on estate A — inserted directly via the
+    // service-role client (bypassing RLS) since the invite/accept flow
+    // (Development Roadmap Milestone 1 step 5) doesn't exist yet. This tests
+    // wrong-ROLE denial specifically (an accepted, same-estate member who
+    // isn't the owner), distinct from the wrong-ESTATE tests above.
+    const { error: memberError } = await adminClient.from("estate_members").insert({
+      estate_id: estateAId,
+      user_id: userC.id,
+      role: "executor",
+      invite_email: userC.email,
+      invite_status: "accepted",
+      accepted_at: new Date().toISOString(),
+    });
+    if (memberError) throw memberError;
   });
 
   afterAll(async () => {
     // Service-role client bypasses RLS entirely — used only for cleanup, never
     // for the assertions above. estates must go before users (owner_user_id
-    // is ON DELETE RESTRICT — see docs/DATABASE_SCHEMA.md §2.3).
+    // is ON DELETE RESTRICT — see docs/DATABASE_SCHEMA.md §2.3); estate_members
+    // rows (including userC's) cascade-delete with their estate.
     await adminClient.from("estates").delete().in("id", [estateAId, estateBId]);
     await adminClient.auth.admin.deleteUser(userA.id);
     await adminClient.auth.admin.deleteUser(userB.id);
+    await adminClient.auth.admin.deleteUser(userC.id);
   });
 
   it("lets the owner read their own estate", async () => {
@@ -161,5 +182,40 @@ describe("RLS: estate isolation between unrelated users", () => {
     const { data, error } = await clientA.from("digital_assets").select("*").eq("id", assetAId).maybeSingle();
     expect(error).toBeNull();
     expect(data?.id).toBe(assetAId);
+  });
+
+  // --- Wrong-ROLE denial (same estate, accepted member, not the owner) —
+  // digital_assets_write_owner scopes writes to role='owner' specifically,
+  // distinct from the wrong-ESTATE isolation tested above.
+  it("lets an accepted Executor on the same estate read its digital_assets", async () => {
+    const { data, error } = await clientC.from("digital_assets").select("*").eq("id", assetAId).maybeSingle();
+    expect(error).toBeNull();
+    expect(data?.id).toBe(assetAId);
+  });
+
+  it("denies an accepted Executor (not the owner) from creating a digital_asset", async () => {
+    const { data, error } = await clientC
+      .from("digital_assets")
+      .insert({ estate_id: estateAId, category: "other", intended_outcome: "ignore" })
+      .select("id");
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("denies an accepted Executor (not the owner) from updating a digital_asset", async () => {
+    const { data, error } = await clientC
+      .from("digital_assets")
+      .update({ intended_outcome: "transfer" })
+      .eq("id", assetAId)
+      .select("*");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+
+    const { data: unchanged } = await adminClient
+      .from("digital_assets")
+      .select("intended_outcome")
+      .eq("id", assetAId)
+      .single();
+    expect(unchanged?.intended_outcome).toBe("close");
   });
 });
