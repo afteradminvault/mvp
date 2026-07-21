@@ -5,6 +5,7 @@ import { SupabaseDigitalAssetRepository } from "@/infrastructure/assets/supabase
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
 import { ArchiveAssetButton } from "./archive-asset-button";
 import { EditAssetForm } from "./edit-asset-form";
+import { VaultItemsSection } from "./vault-items-section";
 
 export default async function AssetDetailPage({
   params,
@@ -53,6 +54,10 @@ export default async function AssetDetailPage({
       <div className="border-t border-gray-200 pt-6">
         <h2 className="mb-4 text-lg font-medium">Edit</h2>
         <EditAssetForm estateId={id} asset={asset} />
+      </div>
+
+      <div className="mt-10 border-t border-gray-200 pt-6">
+        <VaultItemsSection estateId={id} assetId={asset.id} />
       </div>
 
       {!asset.archivedAt && (

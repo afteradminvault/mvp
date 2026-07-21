@@ -1,6 +1,11 @@
-import { randomUUID } from "node:crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  adminClient,
+  createConfirmedTestUser,
+  fetchAnySupportedJurisdictionId,
+  signedInClient,
+} from "./supabase-test-helpers";
 
 /**
  * Milestone 0 exit criterion (docs/DEVELOPMENT_ROADMAP.md): "a test row
@@ -19,33 +24,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * not the service-role client (which bypasses RLS and is used here only for
  * test setup/teardown).
  */
-
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const adminClient = createClient(url, serviceRoleKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-async function createConfirmedTestUser(): Promise<{ id: string; email: string; password: string }> {
-  const email = `rls-test-${randomUUID()}@aftervault-test.local`;
-  const password = `Test-${randomUUID()}!Aa1`;
-  const { data, error } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (error) throw error;
-  return { id: data.user.id, email, password };
-}
-
-async function signedInClient(email: string, password: string): Promise<SupabaseClient> {
-  const client = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { error } = await client.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return client;
-}
 
 describe("RLS: estate isolation between unrelated users", () => {
   let userA: { id: string; email: string; password: string };
@@ -67,14 +45,7 @@ describe("RLS: estate isolation between unrelated users", () => {
     clientB = await signedInClient(userB.email, userB.password);
     clientC = await signedInClient(userC.email, userC.password);
 
-    const { data: jurisdiction, error: jurisdictionError } = await adminClient
-      .from("jurisdictions")
-      .select("id")
-      .eq("is_supported", true)
-      .limit(1)
-      .single();
-    if (jurisdictionError) throw jurisdictionError;
-    jurisdictionId = jurisdiction.id;
+    jurisdictionId = await fetchAnySupportedJurisdictionId();
 
     const { data: estateA, error: estateAError } = await clientA.rpc("create_estate", {
       p_display_name: "User A's Estate",
