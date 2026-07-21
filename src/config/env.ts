@@ -26,6 +26,13 @@ const serverOnlyEnvSchema = z.object({
   // domain is verified in the Resend dashboard.
   RESEND_FROM_EMAIL: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
+  // Vercel automatically sends `Authorization: Bearer $CRON_SECRET` on cron
+  // invocations when this is set as a project env var — see
+  // src/app/api/cron/placeholder/route.ts. Optional so local dev doesn't
+  // require it; the route logs a warning and allows the call through
+  // unauthenticated if it's unset, since there's nothing sensitive in the
+  // placeholder job itself (revisit this default once a real job replaces it).
+  CRON_SECRET: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;

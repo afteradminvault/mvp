@@ -13,12 +13,12 @@ Nothing in Milestone 1+ can start before this exists and is verified working, be
 - Initial migration: every table from Database Schema, all FKs/indexes/enums as specified.
 - RLS policies enforcing the `estate_members`-based access model (Security Architecture §3.2) — **built now, not deferred**, because retrofitting RLS onto tables already holding real data is a much riskier migration than having it correct from the first row inserted.
 - Supabase Auth configured: email/password + MFA (TOTP), matching the "MFA required for owner/executor" requirement.
-- Netlify deploy pipeline (`netlify.toml`, Next.js runtime plugin) plus one placeholder Scheduled Function, to prove the background-job pattern works before real reminder logic is built on it.
+- Deploy pipeline plus one placeholder background-job function, to prove the pattern works before real reminder logic is built on it. Originally Netlify (`netlify.toml`, Next.js runtime plugin, one Scheduled Function) through Milestone 1; migrated to Vercel afterward by explicit request — see docs/TECH_STACK.md's Hosting/Background jobs sections. The placeholder is now a Vercel Cron Job (`vercel.json` + a `CRON_SECRET`-checked API route).
 - Resend configured with one working test send.
 - OpenAI SDK + env var scaffolding only (no feature).
 - CI: lint, type-check, unit test runner.
 
-**Exit criteria**: project runs locally, migration applies cleanly to a fresh database, a test row respects RLS (i.e., a query as User A cannot read User B's estate data — this should be an actual automated test, not a manual check, since it's the single most important behavior in the system to regression-test), a test email sends, a test deploy to Netlify succeeds.
+**Exit criteria**: project runs locally, migration applies cleanly to a fresh database, a test row respects RLS (i.e., a query as User A cannot read User B's estate data — this should be an actual automated test, not a manual check, since it's the single most important behavior in the system to regression-test), a test email sends, a test deploy succeeds (originally verified on Netlify; the pipeline now targets Vercel).
 
 ---
 

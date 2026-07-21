@@ -81,4 +81,11 @@ describe("parseServerEnv", () => {
       parseServerEnv({ ...validServerEnv, OPENAI_API_KEY: "" }),
     ).toThrow(/OPENAI_API_KEY/);
   });
+
+  it("does not require CRON_SECRET and throws if present but empty", () => {
+    expect(parseServerEnv(validServerEnv)).toEqual(validServerEnv);
+    expect(() =>
+      parseServerEnv({ ...validServerEnv, CRON_SECRET: "" }),
+    ).toThrow(/CRON_SECRET/);
+  });
 });

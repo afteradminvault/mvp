@@ -4,7 +4,7 @@ import sodium from "libsodium-wrappers-sumo";
  * CLIENT-ONLY. Everything under src/crypto/ implements the zero-knowledge
  * vault design (docs/SECURITY_ARCHITECTURE.md §1) and must run exclusively
  * in the browser. Never import anything from this directory into a Server
- * Component, Route Handler, Server Action, or Netlify Function — the server
+ * Component, Route Handler, Server Action, or serverless/cron function — the server
  * must never see plaintext vault content or unwrapped key material. Never
  * log a value that passes through these modules.
  *
