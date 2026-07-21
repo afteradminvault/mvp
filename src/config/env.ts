@@ -20,6 +20,11 @@ const serverOnlyEnvSchema = z.object({
   // route. Neither should block server startup for developers who haven't set
   // them, unlike SUPABASE_SERVICE_ROLE_KEY, which every server code path needs.
   RESEND_API_KEY: z.string().min(1).optional(),
+  // Defaults to Resend's shared sandbox sender (onboarding@resend.dev) if
+  // unset — fine for testing, but Resend's sandbox domain can only send to
+  // the account owner's own verified address. Set this once a real sending
+  // domain is verified in the Resend dashboard.
+  RESEND_FROM_EMAIL: z.string().min(1).optional(),
   OPENAI_API_KEY: z.string().min(1).optional(),
 });
 

@@ -69,6 +69,13 @@ describe("parseServerEnv", () => {
     ).toThrow(/RESEND_API_KEY/);
   });
 
+  it("does not require RESEND_FROM_EMAIL and throws if present but empty", () => {
+    expect(parseServerEnv(validServerEnv)).toEqual(validServerEnv);
+    expect(() =>
+      parseServerEnv({ ...validServerEnv, RESEND_FROM_EMAIL: "" }),
+    ).toThrow(/RESEND_FROM_EMAIL/);
+  });
+
   it("throws if OPENAI_API_KEY is present but empty", () => {
     expect(() =>
       parseServerEnv({ ...validServerEnv, OPENAI_API_KEY: "" }),

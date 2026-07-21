@@ -9,6 +9,7 @@ export function InviteMemberForm({ estateId }: { estateId: string }) {
   const [role, setRole] = useState<"executor" | "helper">("executor");
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -27,6 +28,7 @@ export function InviteMemberForm({ estateId }: { estateId: string }) {
         return;
       }
       setInviteUrl(result.inviteUrl);
+      setEmailSent(result.emailSent);
       setInviteEmail("");
       router.refresh();
     });
@@ -58,7 +60,9 @@ export function InviteMemberForm({ estateId }: { estateId: string }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {inviteUrl && (
         <p className="rounded bg-gray-100 p-3 text-sm">
-          Invite created. This step doesn&apos;t send an email yet — copy this link and send it yourself:
+          {emailSent
+            ? "Invite email sent. You can also share this link directly:"
+            : "Invite created, but the email couldn't be sent — copy this link and send it yourself:"}
           <br />
           <span className="break-all font-mono">{inviteUrl}</span>
         </p>
