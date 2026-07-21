@@ -47,6 +47,9 @@ export default async function EstateDetailPage({
         <Link href={`/estates/${estate.id}/assets`} className="text-sm underline">
           Digital assets &rarr;
         </Link>
+        <Link href={`/estates/${estate.id}/members`} className="text-sm underline">
+          Executors &amp; Helpers &rarr;
+        </Link>
       </div>
 
       <div className="mt-10 border-t border-gray-200 pt-6">
