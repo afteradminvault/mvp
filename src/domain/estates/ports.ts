@@ -23,6 +23,8 @@ export interface Estate {
   checkInIntervalDays: number;
   lastCheckInAt: string;
   gracePeriodDays: number;
+  verificationStartedAt: string | null;
+  selfCancelWindowDays: number;
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;

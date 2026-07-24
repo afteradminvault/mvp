@@ -8,7 +8,7 @@ import type {
   UpdateEstateInput,
 } from "@/domain/estates/ports";
 
-interface EstateRow {
+export interface EstateRow {
   id: string;
   owner_user_id: string;
   jurisdiction_id: string;
@@ -17,6 +17,8 @@ interface EstateRow {
   check_in_interval_days: number;
   last_check_in_at: string;
   grace_period_days: number;
+  verification_started_at: string | null;
+  self_cancel_window_days: number;
   created_at: string;
   updated_at: string;
   closed_at: string | null;
@@ -29,7 +31,7 @@ interface JurisdictionRow {
   display_name: string;
 }
 
-function toEstate(row: EstateRow): Estate {
+export function toEstate(row: EstateRow): Estate {
   return {
     id: row.id,
     ownerUserId: row.owner_user_id,
@@ -39,6 +41,8 @@ function toEstate(row: EstateRow): Estate {
     checkInIntervalDays: row.check_in_interval_days,
     lastCheckInAt: row.last_check_in_at,
     gracePeriodDays: row.grace_period_days,
+    verificationStartedAt: row.verification_started_at,
+    selfCancelWindowDays: row.self_cancel_window_days,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     closedAt: row.closed_at,

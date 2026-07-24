@@ -17,6 +17,16 @@ vi.mock("@/infrastructure/dead-mans-switch/detect-overdue-estates", () => ({
   detectAndMarkOverdueEstates: (...args: unknown[]) => detectAndMarkOverdueEstatesMock(...args),
 }));
 
+const escalateOverdueToVerifyingMock = vi.fn();
+vi.mock("@/infrastructure/dead-mans-switch/escalate-overdue-to-verifying", () => ({
+  escalateOverdueToVerifying: (...args: unknown[]) => escalateOverdueToVerifyingMock(...args),
+}));
+
+const escalateLapsedVerificationsMock = vi.fn();
+vi.mock("@/infrastructure/dead-mans-switch/escalate-lapsed-verifications", () => ({
+  escalateLapsedVerifications: (...args: unknown[]) => escalateLapsedVerificationsMock(...args),
+}));
+
 function requestWithAuth(header?: string): Request {
   return new Request("http://localhost/api/cron/check-in-overdue", {
     headers: header ? { authorization: header } : {},
@@ -27,6 +37,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   getServerEnvMock.mockReturnValue({ CRON_SECRET: "test-secret" });
   detectAndMarkOverdueEstatesMock.mockResolvedValue([]);
+  escalateOverdueToVerifyingMock.mockResolvedValue([]);
+  escalateLapsedVerificationsMock.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -38,18 +50,32 @@ describe("GET /api/cron/check-in-overdue", () => {
     const response = await GET(requestWithAuth("Bearer wrong-secret"));
     expect(response.status).toBe(401);
     expect(detectAndMarkOverdueEstatesMock).not.toHaveBeenCalled();
+    expect(escalateOverdueToVerifyingMock).not.toHaveBeenCalled();
+    expect(escalateLapsedVerificationsMock).not.toHaveBeenCalled();
   });
 
-  it("runs the sweep and reports the count when authorized", async () => {
+  it("runs all three sweeps and reports each count when authorized", async () => {
     detectAndMarkOverdueEstatesMock.mockResolvedValue([
       { id: "estate-1", lastCheckInAt: "2026-01-01T00:00:00Z", checkInIntervalDays: 90 },
     ]);
+    escalateOverdueToVerifyingMock.mockResolvedValue([
+      { id: "estate-2", lastCheckInAt: "2026-01-01T00:00:00Z" },
+      { id: "estate-3", lastCheckInAt: "2026-01-01T00:00:00Z" },
+    ]);
+    escalateLapsedVerificationsMock.mockResolvedValue([{ id: "estate-4", verificationStartedAt: "2026-01-01T00:00:00Z" }]);
 
     const response = await GET(requestWithAuth("Bearer test-secret"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({ ok: true, checkinOverdueCount: 1 });
+    expect(body).toEqual({
+      ok: true,
+      checkinOverdueCount: 1,
+      escalatedToVerifyingCount: 2,
+      lapsedVerificationsCount: 1,
+    });
     expect(detectAndMarkOverdueEstatesMock).toHaveBeenCalledWith(fakeSupabaseClient);
+    expect(escalateOverdueToVerifyingMock).toHaveBeenCalledWith(fakeSupabaseClient);
+    expect(escalateLapsedVerificationsMock).toHaveBeenCalledWith(fakeSupabaseClient);
   });
 });

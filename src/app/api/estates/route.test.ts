@@ -52,6 +52,8 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     checkInIntervalDays: 90,
     lastCheckInAt: "2026-07-19T00:00:00.000Z",
     gracePeriodDays: 14,
+    verificationStartedAt: null,
+    selfCancelWindowDays: 7,
     createdAt: "2026-07-19T00:00:00.000Z",
     updatedAt: "2026-07-19T00:00:00.000Z",
     closedAt: null,

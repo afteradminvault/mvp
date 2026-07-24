@@ -17,6 +17,11 @@ export default defineConfig({
     // queries) — one worker avoids racing shared fixture setup/teardown.
     fileParallelism: false,
     testTimeout: 20_000,
+    // beforeAll/afterAll hooks in these files provision/tear down several
+    // real users plus RPC round trips — vitest's 10s default has proven too
+    // tight under real network latency (observed timing out across several
+    // files, not any specific one), rather than raising it per-file.
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: {
