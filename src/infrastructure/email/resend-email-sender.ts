@@ -1,11 +1,13 @@
 import { Resend } from "resend";
 import type {
+  ClosureRequestStaleNudgeEmailInput,
   DeathVerificationNoticeEmailInput,
   EmailSender,
   NominationInviteEmailInput,
 } from "@/domain/notifications/ports";
 import { renderNominationInviteEmail } from "./nomination-invite-email-template";
 import { renderDeathVerificationNoticeEmail } from "./death-verification-notice-email-template";
+import { renderClosureRequestStaleNudgeEmail } from "./closure-request-stale-nudge-email-template";
 
 /**
  * Best-effort by design (see ports.ts) — never throws. If RESEND_API_KEY
@@ -69,6 +71,33 @@ export class ResendEmailSender implements EmailSender {
       return true;
     } catch (error) {
       console.error("Failed to send death-verification notice email:", error);
+      return false;
+    }
+  }
+
+  async sendClosureRequestStaleNudgeEmail(input: ClosureRequestStaleNudgeEmailInput): Promise<boolean> {
+    if (!this.apiKey) {
+      console.warn("RESEND_API_KEY is not configured — skipping closure-request stale-nudge email send.");
+      return false;
+    }
+
+    try {
+      const resend = new Resend(this.apiKey);
+      const { subject, html, text } = renderClosureRequestStaleNudgeEmail(input);
+      const { error } = await resend.emails.send({
+        from: this.fromAddress,
+        to: input.toEmail,
+        subject,
+        html,
+        text,
+      });
+      if (error) {
+        console.error("Resend rejected the closure-request stale-nudge email:", error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to send closure-request stale-nudge email:", error);
       return false;
     }
   }

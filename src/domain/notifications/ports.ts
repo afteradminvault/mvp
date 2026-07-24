@@ -29,6 +29,16 @@ export interface DeathVerificationNoticeEmailInput {
   selfCancelUrl: string;
 }
 
+/** Milestone 2 feature 8's stale-closure-request nudge (PRD §5). */
+export interface ClosureRequestStaleNudgeEmailInput {
+  toEmail: string;
+  estateDisplayName: string;
+  assetCategory: string;
+  status: string;
+  daysSinceLastStatusChange: number;
+  closureRequestUrl: string;
+}
+
 export interface EmailSender {
   /**
    * Best-effort by design: the invite row and its shareable link already
@@ -46,4 +56,12 @@ export interface EmailSender {
    * verification_notice_sent event records the outcome regardless.
    */
   sendDeathVerificationNoticeEmail(input: DeathVerificationNoticeEmailInput): Promise<boolean>;
+
+  /**
+   * Best-effort, same rationale: a failed/unconfigured send must never
+   * block the stale-request sweep, which has already marked the request
+   * nudged (mark_stale_closure_requests_needing_nudge) by the time this is
+   * called.
+   */
+  sendClosureRequestStaleNudgeEmail(input: ClosureRequestStaleNudgeEmailInput): Promise<boolean>;
 }
