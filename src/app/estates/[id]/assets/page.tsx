@@ -5,6 +5,8 @@ import type { AssetCategory } from "@/domain/assets/ports";
 import { SupabaseDigitalAssetRepository } from "@/infrastructure/assets/supabase-asset-repository";
 import { EstateNotFoundError, EstateService } from "@/domain/estates/estate-service";
 import { SupabaseEstateRepository } from "@/infrastructure/estates/supabase-estate-repository";
+import { MembershipService } from "@/domain/membership/membership-service";
+import { SupabaseMembershipRepository } from "@/infrastructure/membership/supabase-membership-repository";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
 
 const CATEGORIES: AssetCategory[] = [
@@ -45,10 +47,15 @@ export default async function AssetsPage({
   });
 
   const assetService = new AssetService(new SupabaseDigitalAssetRepository(supabase));
-  const assets = await assetService.listAssets(id, {
-    category: category as AssetCategory | undefined,
-    includeArchived,
-  });
+  const membershipService = new MembershipService(new SupabaseMembershipRepository(supabase));
+  const [assets, members] = await Promise.all([
+    assetService.listAssets(id, {
+      category: category as AssetCategory | undefined,
+      includeArchived,
+    }),
+    membershipService.listMembers(id),
+  ]);
+  const isOwner = members.find((member) => member.userId === user.id)?.role === "owner";
 
   function filterHref(nextCategory?: string) {
     const query = new URLSearchParams();
@@ -75,9 +82,11 @@ export default async function AssetsPage({
           </Link>
           <h1 className="text-2xl font-semibold">Digital assets</h1>
         </div>
-        <Link href={`/estates/${id}/assets/new`} className="rounded bg-black px-4 py-2 text-sm text-white">
-          + Add asset
-        </Link>
+        {isOwner && (
+          <Link href={`/estates/${id}/assets/new`} className="rounded bg-black px-4 py-2 text-sm text-white">
+            + Add asset
+          </Link>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
