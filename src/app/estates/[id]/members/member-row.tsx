@@ -26,7 +26,7 @@ export function MemberRow({ estateId, member }: { estateId: string; member: Memb
     event.preventDefault();
     startTransition(async () => {
       try {
-        await unlock(estateId, password);
+        await unlock(estateId, password, "owner");
         setPassword("");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not unlock the vault.");

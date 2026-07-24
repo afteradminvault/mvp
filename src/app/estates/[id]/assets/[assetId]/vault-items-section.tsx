@@ -73,7 +73,7 @@ export function VaultItemsSection({ estateId, assetId }: { estateId: string; ass
   async function handleUnlockSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      await unlock(estateId, password);
+      await unlock(estateId, password, "owner");
       setPassword("");
     } catch {
       // Error already surfaced via the vault session context's own state.

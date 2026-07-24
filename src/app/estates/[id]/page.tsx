@@ -12,6 +12,9 @@ import { createSupabaseServerClient } from "@/infrastructure/supabase/server-cli
 import { CheckInButton } from "./check-in-button";
 import { EditEstateForm } from "./edit-estate-form";
 import { ReadinessCard } from "./readiness-card";
+import { ReportDeathButton } from "./report-death-button";
+import { SelfCancelBanner } from "./self-cancel-banner";
+import { ExecutorVaultUnlock } from "./executor-vault-unlock";
 
 export default async function EstateDetailPage({
   params,
@@ -45,6 +48,16 @@ export default async function EstateDetailPage({
     readinessService.getReadinessScore(id),
   ]);
 
+  const viewerRole = members.find((member) => member.userId === user.id)?.role ?? null;
+  const isOwner = viewerRole === "owner";
+  const isExecutorOrHelper = viewerRole === "executor" || viewerRole === "helper";
+  const canReportDeath = isExecutorOrHelper && (estate.status === "active_living" || estate.status === "checkin_overdue");
+  const canSelfCancel = isOwner && estate.status === "verifying";
+  const canRecoverKey = viewerRole === "executor" && estate.status === "active_executor";
+  const verificationInProgress =
+    isExecutorOrHelper &&
+    (estate.status === "death_reported" || estate.status === "verifying" || estate.status === "awaiting_death_certificate");
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="text-2xl font-semibold">{estate.displayName}</h1>
@@ -57,7 +70,37 @@ export default async function EstateDetailPage({
         <dd>{estate.gracePeriodDays} days</dd>
         <dt className="text-gray-600">Last check-in</dt>
         <dd>{new Date(estate.lastCheckInAt).toLocaleString()}</dd>
+        <dt className="text-gray-600">Self-cancel window</dt>
+        <dd>{estate.selfCancelWindowDays} days</dd>
       </dl>
+
+      {verificationInProgress && (
+        <p className="mt-6 rounded border border-yellow-400 bg-yellow-50 p-3 text-sm text-yellow-900">
+          This estate is in the death-verification process (status: {estate.status}).
+        </p>
+      )}
+
+      {canSelfCancel && (
+        <div className="mt-6">
+          <SelfCancelBanner
+            estateId={estate.id}
+            selfCancelWindowDays={estate.selfCancelWindowDays}
+            verificationStartedAt={estate.verificationStartedAt}
+          />
+        </div>
+      )}
+
+      {canReportDeath && (
+        <div className="mt-6">
+          <ReportDeathButton estateId={estate.id} />
+        </div>
+      )}
+
+      {canRecoverKey && (
+        <div className="mt-6">
+          <ExecutorVaultUnlock estateId={estate.id} />
+        </div>
+      )}
 
       <div className="mt-6 flex items-center gap-4">
         <CheckInButton estateId={estate.id} />
@@ -96,6 +139,15 @@ export default async function EstateDetailPage({
         >
           Manage your vault
         </Link>
+      </div>
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Documents</h2>
+          <Link href={`/estates/${id}/documents`} className="text-sm underline">
+            Manage &rarr;
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6 rounded border border-gray-300 p-4">
