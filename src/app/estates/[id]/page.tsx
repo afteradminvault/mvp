@@ -159,6 +159,17 @@ export default async function EstateDetailPage({
         </div>
       </div>
 
+      {(isOwner || viewerRole === "executor") && (
+        <div className="mt-6 rounded border border-gray-300 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Audit log</h2>
+            <Link href={`/estates/${id}/audit-log`} className="text-sm underline">
+              View &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 rounded border border-gray-300 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-medium">Executors &amp; Helpers</h2>
