@@ -151,6 +151,15 @@ export default async function EstateDetailPage({
       </div>
 
       <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Account closures</h2>
+          <Link href={`/estates/${id}/closure-requests`} className="text-sm underline">
+            View dashboard &rarr;
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-medium">Executors &amp; Helpers</h2>
           <Link href={`/estates/${id}/members`} className="text-sm underline">
