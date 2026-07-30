@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+
+  --color-cream: #faf6ee;
+  --color-cream-dark: #f0e6d3;
+  --color-ink: #241f1b;
+  --color-ink-soft: #58504a;
+  --color-ember: #bb6b34;
+  --color-ember-dark: #98552a;
+  --color-sage: #6d7b5f;
+  --color-sage-dark: #53604a;
+}
+
+body {
+  font-family: var(--font-sans);
+}

@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
   title: "AfterVault",
-  description: "Manage a deceased person's digital life, securely.",
+  description:
+    "A secure place to organize your accounts, your wishes, and your will — so the people you trust aren't left piecing it together.",
 };
 
 export default function RootLayout({
@@ -12,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
       <body>{children}</body>
     </html>
   );
