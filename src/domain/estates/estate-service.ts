@@ -1,8 +1,10 @@
 import type {
+  CreateDraftCaseInput,
   CreateEstateInput,
   Estate,
   EstateRepository,
   Jurisdiction,
+  SaveDraftProgressInput,
   UpdateEstateInput,
 } from "./ports";
 
@@ -16,9 +18,38 @@ export const MAX_CHECK_IN_INTERVAL_DAYS = 365;
 export const MIN_GRACE_PERIOD_DAYS = 7;
 export const MAX_GRACE_PERIOD_DAYS = 90;
 export const MAX_DISPLAY_NAME_LENGTH = 200;
+export const MAX_DECEASED_FULL_NAME_LENGTH = 200;
+export const MAX_DECEASED_RELATIONSHIP_LENGTH = 100;
+export const MAX_DRAFT_STEP_LENGTH = 100;
 
 export class InvalidEstateInputError extends Error {}
 export class EstateNotFoundError extends Error {}
+
+function validateBoundedText(value: unknown, fieldName: string, maxLength: number): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new InvalidEstateInputError(`${fieldName} is required.`);
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    throw new InvalidEstateInputError(`${fieldName} must be ${maxLength} characters or fewer.`);
+  }
+  return trimmed;
+}
+
+/** DOB/DOD are plain dates (YYYY-MM-DD, from an <input type="date">), not timestamps — never in the future, since both describe things that have already happened by definition. */
+function validatePastDate(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new InvalidEstateInputError(`${fieldName} must be a valid date (YYYY-MM-DD).`);
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new InvalidEstateInputError(`${fieldName} must be a valid date (YYYY-MM-DD).`);
+  }
+  if (parsed.getTime() > Date.now()) {
+    throw new InvalidEstateInputError(`${fieldName} cannot be in the future.`);
+  }
+  return value;
+}
 
 function validateDisplayName(displayName: string): string {
   const trimmed = displayName.trim();
@@ -124,5 +155,80 @@ export class EstateService {
 
   async listSupportedJurisdictions(): Promise<Jurisdiction[]> {
     return this.repository.listSupportedJurisdictions();
+  }
+
+  /**
+   * The onboarding entry point (PRD v2 §3.2, US-2.1) — creates a case in
+   * 'draft' status. date_of_death is the only optional deceased-profile
+   * field: blank means pre-death/planning-ahead, filled in means
+   * post-death (PRD v2 §0) — same form either way, per the resolved
+   * "one unified flow, copy adapts" decision.
+   */
+  async createDraftCase(input: CreateDraftCaseInput): Promise<Estate> {
+    const jurisdictionId = input.jurisdictionId.trim();
+    if (jurisdictionId.length === 0) {
+      throw new InvalidEstateInputError("A jurisdiction must be selected.");
+    }
+    const deceasedFullName = validateBoundedText(
+      input.deceasedFullName,
+      "Deceased's full name",
+      MAX_DECEASED_FULL_NAME_LENGTH,
+    );
+    const deceasedDateOfBirth = validatePastDate(input.deceasedDateOfBirth, "Date of birth");
+    const deceasedRelationship = validateBoundedText(
+      input.deceasedRelationship,
+      "Relationship",
+      MAX_DECEASED_RELATIONSHIP_LENGTH,
+    );
+    const deceasedDateOfDeath =
+      input.deceasedDateOfDeath === undefined || input.deceasedDateOfDeath === null
+        ? null
+        : validatePastDate(input.deceasedDateOfDeath, "Date of death");
+    if (deceasedDateOfDeath !== null && deceasedDateOfDeath < deceasedDateOfBirth) {
+      throw new InvalidEstateInputError("Date of death cannot be before date of birth.");
+    }
+    const checkInIntervalDays =
+      input.checkInIntervalDays === undefined
+        ? undefined
+        : validateCheckInIntervalDays(input.checkInIntervalDays);
+
+    return this.repository.createDraftCase({
+      jurisdictionId,
+      deceasedFullName,
+      deceasedDateOfBirth,
+      deceasedRelationship,
+      deceasedDateOfDeath,
+      checkInIntervalDays,
+    });
+  }
+
+  /**
+   * Merges the given fields into the existing draft_payload rather than
+   * replacing it wholesale — each onboarding step submits only its own
+   * slice (Database Schema v2 §2.3), and a later step's save must not
+   * erase an earlier step's answers.
+   */
+  async saveDraftProgress(estateId: string, input: SaveDraftProgressInput): Promise<Estate> {
+    const draftStep = validateBoundedText(input.draftStep, "draftStep", MAX_DRAFT_STEP_LENGTH);
+    if (typeof input.draftPayload !== "object" || input.draftPayload === null || Array.isArray(input.draftPayload)) {
+      throw new InvalidEstateInputError("draftPayload must be an object.");
+    }
+
+    const existing = await this.getEstate(estateId);
+    if (existing.status !== "draft") {
+      throw new InvalidEstateInputError("Onboarding has already been completed for this case.");
+    }
+
+    const mergedPayload = { ...existing.draftPayload, ...input.draftPayload };
+    return this.repository.saveDraftProgress(estateId, { draftStep, draftPayload: mergedPayload });
+  }
+
+  /** Completes onboarding — the only path from 'draft' to 'active_living' (activate_draft_case()). */
+  async activateDraftCase(estateId: string): Promise<Estate> {
+    const existing = await this.getEstate(estateId);
+    if (existing.status !== "draft") {
+      throw new InvalidEstateInputError("This case is not in draft status.");
+    }
+    return this.repository.activateDraftCase(estateId);
   }
 }

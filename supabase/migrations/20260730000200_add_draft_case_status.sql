@@ -1,0 +1,17 @@
+-- PRD v2 §3.2 / Milestone "Case Management & Onboarding" feature 1 (US-2.1).
+-- Adds the 'draft' status onboarding needs. Kept in its own migration file,
+-- separate from 20260730000300_case_onboarding.sql, because
+-- `ALTER TYPE ... ADD VALUE` cannot safely be used in the same transaction
+-- as a statement that references the new value (e.g. a column DEFAULT
+-- using it) — a well-known Postgres restriction, not a style choice.
+--
+-- 'draft' is added as a genuinely new value, not a rename of 'setup':
+-- create_case() (the RPC behind the still-live /estates/new flow, out of
+-- scope for this feature) already creates a case directly in
+-- active_living and has done so since
+-- 20260723000400_activate_estate_on_creation.sql — 'setup' is already
+-- dead code on that path today. Renaming it to 'draft' would only be
+-- correct if every caller of create_case() were being moved onto the new
+-- draft flow, which they are not (see the companion migration's own
+-- comment on create_draft_case() vs create_case()).
+alter type estate_status add value 'draft' before 'active_living';

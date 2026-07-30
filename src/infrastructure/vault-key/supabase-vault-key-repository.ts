@@ -24,14 +24,14 @@ export class SupabaseVaultKeyRepository implements VaultKeyRepository {
     }
 
     const { data: memberRow, error: memberError } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("role, wrapped_vault_key")
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .eq("user_id", user.id)
       .maybeSingle();
     if (memberError) throw memberError;
-    if (!memberRow || memberRow.role !== "owner") {
-      throw new Error("only the estate owner can access this estate's vault key");
+    if (!memberRow || memberRow.role !== "family") {
+      throw new Error("only the case owner can access this case's vault key");
     }
 
     const { data: userRow, error: userError } = await this.supabase

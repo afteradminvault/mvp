@@ -5,6 +5,8 @@ import {
   EstateService,
   InvalidEstateInputError,
   MAX_CHECK_IN_INTERVAL_DAYS,
+  MAX_DECEASED_FULL_NAME_LENGTH,
+  MAX_DECEASED_RELATIONSHIP_LENGTH,
   MAX_DISPLAY_NAME_LENGTH,
   MAX_GRACE_PERIOD_DAYS,
   MIN_CHECK_IN_INTERVAL_DAYS,
@@ -19,6 +21,9 @@ function createFakeRepository(overrides: Partial<EstateRepository> = {}): Estate
     recordCheckIn: vi.fn(),
     listMyEstates: vi.fn(),
     listSupportedJurisdictions: vi.fn(),
+    createDraftCase: vi.fn(),
+    saveDraftProgress: vi.fn(),
+    activateDraftCase: vi.fn(),
     ...overrides,
   };
 }
@@ -38,6 +43,12 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     createdAt: "2026-07-19T00:00:00.000Z",
     updatedAt: "2026-07-19T00:00:00.000Z",
     closedAt: null,
+    deceasedFullName: null,
+    deceasedDateOfBirth: null,
+    deceasedRelationship: null,
+    deceasedDateOfDeath: null,
+    draftStep: null,
+    draftPayload: {},
     ...overrides,
   };
 }
@@ -236,5 +247,197 @@ describe("EstateService.listMyEstates / listSupportedJurisdictions", () => {
     const service = new EstateService(repository);
 
     await expect(service.listSupportedJurisdictions()).resolves.toBe(jurisdictions);
+  });
+});
+
+describe("EstateService.createDraftCase", () => {
+  const validInput = {
+    jurisdictionId: "jurisdiction-1",
+    deceasedFullName: "Diane Whitfield",
+    deceasedDateOfBirth: "1950-01-01",
+    deceasedRelationship: "mother",
+  };
+
+  it("delegates to the repository with trimmed fields, deceasedDateOfDeath defaulting to null", async () => {
+    const estate = makeEstate({ status: "draft" });
+    const repository = createFakeRepository({ createDraftCase: vi.fn().mockResolvedValue(estate) });
+    const service = new EstateService(repository);
+
+    const result = await service.createDraftCase({
+      ...validInput,
+      deceasedFullName: "  Diane Whitfield  ",
+    });
+
+    expect(repository.createDraftCase).toHaveBeenCalledWith({
+      jurisdictionId: "jurisdiction-1",
+      deceasedFullName: "Diane Whitfield",
+      deceasedDateOfBirth: "1950-01-01",
+      deceasedRelationship: "mother",
+      deceasedDateOfDeath: null,
+      checkInIntervalDays: undefined,
+    });
+    expect(result).toBe(estate);
+  });
+
+  it("passes through a provided deceasedDateOfDeath", async () => {
+    const estate = makeEstate({ status: "draft" });
+    const repository = createFakeRepository({ createDraftCase: vi.fn().mockResolvedValue(estate) });
+    const service = new EstateService(repository);
+
+    await service.createDraftCase({ ...validInput, deceasedDateOfDeath: "2026-07-01" });
+
+    expect(repository.createDraftCase).toHaveBeenCalledWith(
+      expect.objectContaining({ deceasedDateOfDeath: "2026-07-01" }),
+    );
+  });
+
+  it("rejects a missing jurisdiction", async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({ ...validInput, jurisdictionId: "  " }),
+    ).rejects.toThrow(InvalidEstateInputError);
+    expect(repository.createDraftCase).not.toHaveBeenCalled();
+  });
+
+  it("rejects a blank deceased full name", async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({ ...validInput, deceasedFullName: "   " }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it(`rejects a deceased full name longer than ${MAX_DECEASED_FULL_NAME_LENGTH} characters`, async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({ ...validInput, deceasedFullName: "x".repeat(MAX_DECEASED_FULL_NAME_LENGTH + 1) }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it(`rejects a relationship longer than ${MAX_DECEASED_RELATIONSHIP_LENGTH} characters`, async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({
+        ...validInput,
+        deceasedRelationship: "x".repeat(MAX_DECEASED_RELATIONSHIP_LENGTH + 1),
+      }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it("rejects a malformed date of birth", async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({ ...validInput, deceasedDateOfBirth: "not-a-date" }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it("rejects a date of birth in the future", async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+    const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    await expect(
+      service.createDraftCase({ ...validInput, deceasedDateOfBirth: future }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it("rejects a date of death before the date of birth", async () => {
+    const repository = createFakeRepository();
+    const service = new EstateService(repository);
+
+    await expect(
+      service.createDraftCase({
+        ...validInput,
+        deceasedDateOfBirth: "2000-01-01",
+        deceasedDateOfDeath: "1999-01-01",
+      }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+});
+
+describe("EstateService.saveDraftProgress", () => {
+  it("merges the given payload into the existing draft_payload rather than replacing it", async () => {
+    const existing = makeEstate({ status: "draft", draftPayload: { step1: "answer1" } });
+    const updated = makeEstate({ status: "draft", draftPayload: { step1: "answer1", step2: "answer2" } });
+    const repository = createFakeRepository({
+      getEstate: vi.fn().mockResolvedValue(existing),
+      saveDraftProgress: vi.fn().mockResolvedValue(updated),
+    });
+    const service = new EstateService(repository);
+
+    const result = await service.saveDraftProgress("estate-1", {
+      draftStep: "step2",
+      draftPayload: { step2: "answer2" },
+    });
+
+    expect(repository.saveDraftProgress).toHaveBeenCalledWith("estate-1", {
+      draftStep: "step2",
+      draftPayload: { step1: "answer1", step2: "answer2" },
+    });
+    expect(result).toBe(updated);
+  });
+
+  it("rejects saving progress once onboarding is no longer in draft", async () => {
+    const existing = makeEstate({ status: "active_living" });
+    const repository = createFakeRepository({ getEstate: vi.fn().mockResolvedValue(existing) });
+    const service = new EstateService(repository);
+
+    await expect(
+      service.saveDraftProgress("estate-1", { draftStep: "step2", draftPayload: {} }),
+    ).rejects.toThrow(InvalidEstateInputError);
+    expect(repository.saveDraftProgress).not.toHaveBeenCalled();
+  });
+
+  it("rejects a blank draftStep", async () => {
+    const existing = makeEstate({ status: "draft" });
+    const repository = createFakeRepository({ getEstate: vi.fn().mockResolvedValue(existing) });
+    const service = new EstateService(repository);
+
+    await expect(
+      service.saveDraftProgress("estate-1", { draftStep: "  ", draftPayload: {} }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+
+  it("rejects a non-object draftPayload", async () => {
+    const existing = makeEstate({ status: "draft" });
+    const repository = createFakeRepository({ getEstate: vi.fn().mockResolvedValue(existing) });
+    const service = new EstateService(repository);
+
+    await expect(
+      service.saveDraftProgress("estate-1", { draftStep: "step2", draftPayload: "not-an-object" as never }),
+    ).rejects.toThrow(InvalidEstateInputError);
+  });
+});
+
+describe("EstateService.activateDraftCase", () => {
+  it("delegates to the repository when the case is in draft status", async () => {
+    const existing = makeEstate({ status: "draft" });
+    const activated = makeEstate({ status: "active_living" });
+    const repository = createFakeRepository({
+      getEstate: vi.fn().mockResolvedValue(existing),
+      activateDraftCase: vi.fn().mockResolvedValue(activated),
+    });
+    const service = new EstateService(repository);
+
+    await expect(service.activateDraftCase("estate-1")).resolves.toBe(activated);
+    expect(repository.activateDraftCase).toHaveBeenCalledWith("estate-1");
+  });
+
+  it("rejects activating a case that isn't in draft status", async () => {
+    const existing = makeEstate({ status: "active_living" });
+    const repository = createFakeRepository({ getEstate: vi.fn().mockResolvedValue(existing) });
+    const service = new EstateService(repository);
+
+    await expect(service.activateDraftCase("estate-1")).rejects.toThrow(InvalidEstateInputError);
+    expect(repository.activateDraftCase).not.toHaveBeenCalled();
   });
 });

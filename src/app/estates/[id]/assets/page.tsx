@@ -55,7 +55,7 @@ export default async function AssetsPage({
     }),
     membershipService.listMembers(id),
   ]);
-  const isOwner = members.find((member) => member.userId === user.id)?.role === "owner";
+  const isOwner = members.find((member) => member.userId === user.id)?.role === "family";
 
   function filterHref(nextCategory?: string) {
     const query = new URLSearchParams();

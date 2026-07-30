@@ -60,11 +60,13 @@ export default async function AssetDetailPage({
   ]);
   const closureRequests = allClosureRequests.filter((request) => request.digitalAssetId === assetId);
   const viewerRole = members.find((member) => member.userId === user.id)?.role ?? null;
-  const isOwner = viewerRole === "owner";
+  const isOwner = estate.ownerUserId === user.id;
   const isExecutor = viewerRole === "executor";
-  // No `viewerRole === "helper"` branch anywhere below — Helper gets no
-  // vault section at all (API Specification §6: "Explicitly no helper
-  // access to any vault-items route"), not even a read-only one.
+  // There is no view-only collaborator role anymore (PRD v2 dropped
+  // Helper, folded into "family") — a non-owner "family" member currently
+  // can't exist either (no invite path onto a second family row), so in
+  // practice the only two viewers of this page are the case owner and an
+  // invited Executor. Nothing below branches on a third case on purpose.
 
   return (
     <main className="mx-auto max-w-md px-4 py-12">

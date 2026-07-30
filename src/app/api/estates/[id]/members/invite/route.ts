@@ -52,7 +52,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       estateId: id,
       actorUserId: session.userId,
       eventType: "member_invited",
-      targetTable: "estate_members",
+      targetTable: "case_members",
       targetId: member.id,
     });
 

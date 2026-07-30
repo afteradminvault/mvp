@@ -20,7 +20,6 @@ import { packEncryptedPayload, unpackEncryptedPayload } from "@/crypto/wire-form
 import { toByteaColumn } from "@/infrastructure/supabase/bytea-hex";
 import { SupabaseKeyRecoveryRepository } from "@/infrastructure/key-recovery/supabase-key-recovery-repository";
 import { SupabaseVaultItemRepository } from "@/infrastructure/vault-items/supabase-vault-item-repository";
-import { SupabaseDigitalAssetRepository } from "@/infrastructure/assets/supabase-asset-repository";
 import { SupabaseDocumentRepository } from "@/infrastructure/documents/supabase-document-repository";
 import {
   adminClient,
@@ -32,22 +31,29 @@ import {
 
 /**
  * Milestone 2 feature 5 (executor key-recovery) 🔒 + feature 6 (asset/
- * vault-item read paths for executor, Helper exclusion). Security
- * Architecture §1.2, API Specification §4-§6. This is the one test in the
- * suite that actually proves the full cryptographic chain end-to-end
- * (real X25519 keypair, real Argon2id-derived wrapping key, real
- * XChaCha20-Poly1305 vault item) rather than just asserting the server
- * returns the right-shaped ciphertext blobs — a mocked-repository test
- * can't distinguish "correct crypto" from "opaque blob passed through
- * unchanged." Order-dependent within this file (fileParallelism: false).
+ * vault-item read paths for executor). Security Architecture §1.2, API
+ * Specification §4-§6. This is the one test in the suite that actually
+ * proves the full cryptographic chain end-to-end (real X25519 keypair,
+ * real Argon2id-derived wrapping key, real XChaCha20-Poly1305 vault item)
+ * rather than just asserting the server returns the right-shaped
+ * ciphertext blobs — a mocked-repository test can't distinguish "correct
+ * crypto" from "opaque blob passed through unchanged." Order-dependent
+ * within this file (fileParallelism: false).
+ *
+ * The original "Helper" track (a third invited role with case access but
+ * no vault key) was removed here, not just renamed — PRD v2 dropped the
+ * Helper role, and case_member_role only has family/executor now, so
+ * there's no longer any way to invite a second, lower-trust member to
+ * construct that scenario at all. If a lower-trust collaborator role
+ * comes back (PRD v2 §8 Q3 is explicitly open on this), this coverage
+ * needs to be rebuilt against whatever that role ends up being, not
+ * un-deleted as-is.
  */
-describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read paths, Helper exclusion", () => {
+describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read paths", () => {
   let owner: TestUser;
   let executor: TestUser;
-  let helper: TestUser;
   let ownerClient: SupabaseClient;
   let executorClient: SupabaseClient;
-  let helperClient: SupabaseClient;
   let estateId: string;
   let assetId: string;
   let vaultItemId: string;
@@ -62,13 +68,11 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
   beforeAll(async () => {
     owner = await createConfirmedTestUser();
     executor = await createConfirmedTestUser();
-    helper = await createConfirmedTestUser();
     ownerClient = await signedInClient(owner.email, owner.password);
     executorClient = await signedInClient(executor.email, executor.password);
-    helperClient = await signedInClient(helper.email, helper.password);
 
     const jurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: estate, error: estateError } = await ownerClient.rpc("create_estate", {
+    const { data: estate, error: estateError } = await ownerClient.rpc("create_case", {
       p_display_name: "Key Recovery Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
@@ -77,7 +81,7 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
 
     // --- Real invite/accept for the executor, with a real keypair ---
     const { data: executorMember, error: executorInviteError } = await ownerClient.rpc("invite_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_invite_email: executor.email,
       p_role: "executor",
     });
@@ -97,21 +101,6 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
       p_kdf_salt: toByteaColumn(await bytesToHex(executorKdfSalt)),
     });
     if (acceptError) throw acceptError;
-
-    // --- Helper: accepted, but never gets a wrapped VK copy (no vault access) ---
-    const { data: helperMember, error: helperInviteError } = await ownerClient.rpc("invite_member", {
-      p_estate_id: estateId,
-      p_invite_email: helper.email,
-      p_role: "helper",
-    });
-    if (helperInviteError) throw helperInviteError;
-    const { error: helperAcceptError } = await helperClient.rpc("accept_invite", {
-      p_token: helperMember.invite_token,
-      p_public_key: "\\xaabbcc",
-      p_wrapped_private_key: "\\x112233",
-      p_kdf_salt: "\\x445566",
-    });
-    if (helperAcceptError) throw helperAcceptError;
 
     // --- A real asset + a real, correctly-encrypted vault item ---
     const { data: asset, error: assetError } = await adminClient
@@ -139,7 +128,7 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
     // --- Owner wraps a real VK copy for the executor (sealed box, no packing) ---
     const sealedVaultKey = await wrapVaultKeyForMember(vaultKey, executorKeyPair.publicKey);
     const { error: wrapError } = await ownerClient.rpc("wrap_key_share_for_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_member_id: executorMemberId,
       p_sealed_vault_key: toByteaColumn(await bytesToHex(sealedVaultKey)),
     });
@@ -147,7 +136,7 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
 
     // --- Drive the estate to active_executor via the real, already-shipped state machine ---
     const { error: seedError } = await adminClient
-      .from("estates")
+      .from("cases")
       .update({ check_in_interval_days: 1, grace_period_days: 1, last_check_in_at: daysAgo(10) })
       .eq("id", estateId);
     if (seedError) throw seedError;
@@ -156,7 +145,7 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
     const { error: escalateError } = await adminClient.rpc("escalate_overdue_to_verifying");
     if (escalateError) throw escalateError;
     const { error: windowSeedError } = await adminClient
-      .from("estates")
+      .from("cases")
       .update({ self_cancel_window_days: 1, verification_started_at: daysAgo(10) })
       .eq("id", estateId);
     if (windowSeedError) throw windowSeedError;
@@ -180,19 +169,10 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
       await adminClient.storage.from("documents").remove(storageObjects.map((f) => `${estateId}/${f.name}`));
     }
     await adminClient.from("documents").delete().eq("estate_id", estateId);
-    await adminClient.from("estates").delete().eq("id", estateId);
+    await adminClient.from("cases").delete().eq("id", estateId);
     await adminClient.auth.admin.deleteUser(owner.id);
     await adminClient.auth.admin.deleteUser(executor.id);
-    await adminClient.auth.admin.deleteUser(helper.id);
   }, 20_000);
-
-  it("denies key-recovery material to the Helper (never got a wrapped VK, wrong role)", async () => {
-    const material = await new SupabaseKeyRecoveryRepository(helperClient).getExecutorKeyRecoveryMaterial(
-      estateId,
-      helper.id,
-    );
-    expect(material).toBeNull();
-  });
 
   it("returns the executor's real wrapped material via key-recovery", async () => {
     const material = await new SupabaseKeyRecoveryRepository(executorClient).getExecutorKeyRecoveryMaterial(
@@ -262,16 +242,6 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
     await executorRepo.deleteItem(vaultItemId);
     const stillThere = await new SupabaseVaultItemRepository(ownerClient).getItem(vaultItemId);
     expect(stillThere).not.toBeNull();
-  });
-
-  it("hides vault items entirely from the Helper (RLS has no Helper policy at all)", async () => {
-    const items = await new SupabaseVaultItemRepository(helperClient).listItems(assetId);
-    expect(items).toEqual([]);
-  });
-
-  it("still lets the Helper read non-vault asset metadata (API spec §5)", async () => {
-    const assets = await new SupabaseDigitalAssetRepository(helperClient).listAssets(estateId);
-    expect(assets.map((a) => a.id)).toContain(assetId);
   });
 });
 

@@ -12,7 +12,7 @@ import { fromByteaColumn, toByteaColumn } from "@/infrastructure/supabase/bytea-
 
 interface MemberRow {
   id: string;
-  estate_id: string;
+  case_id: string;
   user_id: string | null;
   role: MemberRole;
   invite_email: string;
@@ -28,7 +28,7 @@ interface MemberRow {
 function toEstateMember(row: MemberRow, includeInviteToken: boolean): EstateMember {
   return {
     id: row.id,
-    estateId: row.estate_id,
+    estateId: row.case_id,
     userId: row.user_id,
     role: row.role,
     inviteEmail: row.invite_email,
@@ -43,19 +43,27 @@ function toEstateMember(row: MemberRow, includeInviteToken: boolean): EstateMemb
 }
 
 /**
- * Concrete adapter against Supabase. Every mutation goes through the
- * SECURITY DEFINER RPCs from
- * supabase/migrations/20260721000300_membership_invite_flow.sql — this
+ * Concrete adapter against Supabase. Table is `case_members` at the DB
+ * level (renamed from `estate_members` per PRD v2 §0 —
+ * supabase/migrations/20260730000000_rename_estates_to_cases.sql), kept as
+ * `EstateMember`/`MembershipRepository` at the TypeScript level for this
+ * pass (see supabase-estate-repository.ts's doc comment for the same
+ * scope note). Every mutation goes through the SECURITY DEFINER RPCs from
+ * supabase/migrations/20260730000100_case_member_role_and_rls.sql (was
+ * 20260721000300_membership_invite_flow.sql, before the rename) — this
  * repository does no authorization logic of its own beyond selecting the
  * right columns (deliberately never invite_token in listMembers — see
- * ports.ts).
+ * ports.ts). RPC parameter names are p_case_id now (membership is this
+ * feature's own domain, unlike the other RPCs called from
+ * out-of-scope features, which kept p_estate_id — see the migration's own
+ * scope note).
  */
 export class SupabaseMembershipRepository implements MembershipRepository {
   constructor(private readonly supabase: SupabaseClient) {}
 
   async inviteMember(estateId: string, input: InviteMemberInput): Promise<EstateMember> {
     const { data, error } = await this.supabase.rpc("invite_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_invite_email: input.inviteEmail,
       p_role: input.role,
       ...(input.fallbackOrder !== undefined ? { p_fallback_order: input.fallbackOrder } : {}),
@@ -66,11 +74,11 @@ export class SupabaseMembershipRepository implements MembershipRepository {
 
   async listMembers(estateId: string): Promise<EstateMember[]> {
     const { data, error } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select(
-        "id, estate_id, user_id, role, invite_email, invite_status, invited_at, accepted_at, fallback_order, wrapped_vault_key, created_at",
+        "id, case_id, user_id, role, invite_email, invite_status, invited_at, accepted_at, fallback_order, wrapped_vault_key, created_at",
       )
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .order("created_at", { ascending: true });
     if (error) throw error;
     return (data as MemberRow[]).map((row) => toEstateMember(row, false));
@@ -79,11 +87,11 @@ export class SupabaseMembershipRepository implements MembershipRepository {
   async getInvitePreview(token: string): Promise<InvitePreview> {
     const { data, error } = await this.supabase.rpc("get_invite_preview", { p_token: token });
     if (error) throw error;
-    const row = (data as { estate_display_name: string; role: MemberRole; valid: boolean }[])[0];
+    const row = (data as { case_display_name: string; role: MemberRole; valid: boolean }[])[0];
     if (!row) {
       throw new Error("invite not found or already used");
     }
-    return { estateDisplayName: row.estate_display_name, role: row.role, valid: row.valid };
+    return { estateDisplayName: row.case_display_name, role: row.role, valid: row.valid };
   }
 
   async acceptInvite(token: string, input: AcceptInviteInput): Promise<EstateMember> {
@@ -98,7 +106,7 @@ export class SupabaseMembershipRepository implements MembershipRepository {
   }
 
   async getMemberPublicKeys(estateId: string): Promise<MemberPublicKey[]> {
-    const { data, error } = await this.supabase.rpc("get_member_public_keys", { p_estate_id: estateId });
+    const { data, error } = await this.supabase.rpc("get_member_public_keys", { p_case_id: estateId });
     if (error) throw error;
     return (data as { member_id: string; public_key: string }[]).map((row) => ({
       memberId: row.member_id,
@@ -108,7 +116,7 @@ export class SupabaseMembershipRepository implements MembershipRepository {
 
   async wrapKeyShareForMember(estateId: string, memberId: string, sealedVaultKey: string): Promise<EstateMember> {
     const { data, error } = await this.supabase.rpc("wrap_key_share_for_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_member_id: memberId,
       p_sealed_vault_key: toByteaColumn(sealedVaultKey),
     });
@@ -118,7 +126,7 @@ export class SupabaseMembershipRepository implements MembershipRepository {
 
   async revokeMember(estateId: string, memberId: string): Promise<EstateMember> {
     const { data, error } = await this.supabase.rpc("revoke_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_member_id: memberId,
     });
     if (error) throw error;

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import type {
+  CaseSetupConfirmationEmailInput,
   ClosureRequestStaleNudgeEmailInput,
   DeathVerificationNoticeEmailInput,
   EmailSender,
@@ -8,6 +9,7 @@ import type {
 import { renderNominationInviteEmail } from "./nomination-invite-email-template";
 import { renderDeathVerificationNoticeEmail } from "./death-verification-notice-email-template";
 import { renderClosureRequestStaleNudgeEmail } from "./closure-request-stale-nudge-email-template";
+import { renderCaseSetupConfirmationEmail } from "./case-setup-confirmation-email-template";
 
 /**
  * Best-effort by design (see ports.ts) — never throws. If RESEND_API_KEY
@@ -98,6 +100,33 @@ export class ResendEmailSender implements EmailSender {
       return true;
     } catch (error) {
       console.error("Failed to send closure-request stale-nudge email:", error);
+      return false;
+    }
+  }
+
+  async sendCaseSetupConfirmationEmail(input: CaseSetupConfirmationEmailInput): Promise<boolean> {
+    if (!this.apiKey) {
+      console.warn("RESEND_API_KEY is not configured — skipping case-setup confirmation email send.");
+      return false;
+    }
+
+    try {
+      const resend = new Resend(this.apiKey);
+      const { subject, html, text } = renderCaseSetupConfirmationEmail(input);
+      const { error } = await resend.emails.send({
+        from: this.fromAddress,
+        to: input.toEmail,
+        subject,
+        html,
+        text,
+      });
+      if (error) {
+        console.error("Resend rejected the case-setup confirmation email:", error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to send case-setup confirmation email:", error);
       return false;
     }
   }

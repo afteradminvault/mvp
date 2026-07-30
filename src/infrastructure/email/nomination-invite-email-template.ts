@@ -11,13 +11,14 @@ export function renderNominationInviteEmail(input: NominationInviteEmailInput): 
   html: string;
   text: string;
 } {
-  const roleLabel = input.role === "executor" ? "Executor" : "Helper";
+  // Only "executor" is invitable (PRD v2 §0/§8 Q3 — the view-only Helper
+  // role was dropped, folded into "family"), so this no longer branches
+  // on input.role — kept as a parameter for API stability, not because
+  // there's a second case to render.
+  const roleLabel = "Executor";
   const subject = `You've been nominated as ${roleLabel} on AfterVault`;
-
   const roleExplanation =
-    input.role === "executor"
-      ? "As Executor, you'll be responsible for carrying out their wishes and accessing their digital vault once their passing is verified."
-      : "As a Helper, you'll be able to see the status of estate tasks, without access to the private vault contents.";
+    "As Executor, you'll be responsible for carrying out their wishes and accessing their digital vault once their passing is verified.";
 
   const html = `
     <p>You've been nominated as <strong>${roleLabel}</strong> for <strong>${escapeHtml(input.estateDisplayName)}</strong> on AfterVault.</p>

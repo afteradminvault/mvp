@@ -8,7 +8,7 @@ import type {
   MembershipRepository,
 } from "./ports";
 
-export const INVITABLE_ROLES: readonly InvitableRole[] = ["executor", "helper"];
+export const INVITABLE_ROLES: readonly InvitableRole[] = ["executor"];
 
 export class InvalidMembershipInputError extends Error {}
 export class MembershipForbiddenError extends Error {}
@@ -60,7 +60,7 @@ function validateToken(token: unknown): string {
 /** Every RPC in this domain raises a plain Postgres exception; this maps their messages to typed errors, once, in one place. */
 function translateRepositoryError(error: unknown): never {
   if (error instanceof Error) {
-    if (/only the estate owner|cannot invite a second owner|cannot revoke the estate owner/i.test(error.message)) {
+    if (/only the case owner|cannot invite a second family creator|cannot revoke the case owner/i.test(error.message)) {
       throw new MembershipForbiddenError(error.message);
     }
     if (/not found or not yet accepted|^member not found$/i.test(error.message)) {
@@ -79,8 +79,9 @@ function translateRepositoryError(error: unknown): never {
  * (src/crypto/vault-key-hierarchy.ts, src/crypto/asymmetric.ts). This
  * service validates wire format/business rules and delegates every
  * mutation to the narrow SECURITY DEFINER RPCs in
- * supabase/migrations/20260721000300_membership_invite_flow.sql, which
- * enforce the real authorization at the database layer.
+ * supabase/migrations/20260730000100_case_member_role_and_rls.sql (was
+ * 20260721000300_membership_invite_flow.sql, before the PRD v2 rename),
+ * which enforce the real authorization at the database layer.
  */
 export class MembershipService {
   constructor(private readonly repository: MembershipRepository) {}

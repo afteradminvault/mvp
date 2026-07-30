@@ -16,8 +16,9 @@ const anonClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.e
  * Milestone 1 feature 5 (nomination/invite flow) 🔒 — RLS/RPC coverage for
  * invite_member, get_invite_preview, accept_invite, get_member_public_keys,
  * wrap_key_share_for_member, and revoke_member
- * (supabase/migrations/20260721000300_membership_invite_flow.sql). Runs
- * against the real project; order-dependent within this file
+ * (supabase/migrations/20260730000100_case_member_role_and_rls.sql, was
+ * 20260721000300_membership_invite_flow.sql before the PRD v2 rename).
+ * Runs against the real project; order-dependent within this file
  * (fileParallelism: false) since accept/revoke are one-time state
  * transitions.
  */
@@ -41,7 +42,7 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
     clientC = await signedInClient(userC.email, userC.password);
 
     const jurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: estateA, error: estateAError } = await clientA.rpc("create_estate", {
+    const { data: estateA, error: estateAError } = await clientA.rpc("create_case", {
       p_display_name: "Membership Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
@@ -50,33 +51,33 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
   });
 
   afterAll(async () => {
-    await adminClient.from("estates").delete().eq("id", estateAId);
+    await adminClient.from("cases").delete().eq("id", estateAId);
     await adminClient.auth.admin.deleteUser(userA.id);
     await adminClient.auth.admin.deleteUser(userB.id);
     await adminClient.auth.admin.deleteUser(userC.id);
   });
 
-  it("denies an unrelated user from inviting a member to another estate", async () => {
+  it("denies an unrelated user from inviting a member to another case", async () => {
     const { error } = await clientB.rpc("invite_member", {
-      p_estate_id: estateAId,
+      p_case_id: estateAId,
       p_invite_email: "someone@example.com",
       p_role: "executor",
     });
     expect(error).not.toBeNull();
   });
 
-  it("denies inviting a second owner", async () => {
+  it("denies inviting a second family creator", async () => {
     const { error } = await clientA.rpc("invite_member", {
-      p_estate_id: estateAId,
+      p_case_id: estateAId,
       p_invite_email: userC.email,
-      p_role: "owner",
+      p_role: "family",
     });
     expect(error).not.toBeNull();
   });
 
   it("lets the owner invite an Executor", async () => {
     const { data, error } = await clientA.rpc("invite_member", {
-      p_estate_id: estateAId,
+      p_case_id: estateAId,
       p_invite_email: userC.email,
       p_role: "executor",
     });
@@ -91,7 +92,7 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
       p_token: inviteToken,
     });
     expect(previewError).toBeNull();
-    expect(preview[0].estate_display_name).toBe("Membership Test Estate");
+    expect(preview[0].case_display_name).toBe("Membership Test Estate");
     expect(preview[0].role).toBe("executor");
     expect(preview[0].valid).toBe(true);
   });
@@ -130,21 +131,21 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
   });
 
   it("lets the owner read the accepted member's public key", async () => {
-    const { data, error } = await clientA.rpc("get_member_public_keys", { p_estate_id: estateAId });
+    const { data, error } = await clientA.rpc("get_member_public_keys", { p_case_id: estateAId });
     expect(error).toBeNull();
     const entry = (data as { member_id: string; public_key: string }[]).find((row) => row.member_id === memberId);
     expect(entry).toBeDefined();
   });
 
-  it("denies an unrelated user from reading member public keys for another estate", async () => {
-    const { data, error } = await clientB.rpc("get_member_public_keys", { p_estate_id: estateAId });
+  it("denies an unrelated user from reading member public keys for another case", async () => {
+    const { data, error } = await clientB.rpc("get_member_public_keys", { p_case_id: estateAId });
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
 
-  it("denies an unrelated user from wrapping a key share for another estate's member", async () => {
+  it("denies an unrelated user from wrapping a key share for another case's member", async () => {
     const { error } = await clientB.rpc("wrap_key_share_for_member", {
-      p_estate_id: estateAId,
+      p_case_id: estateAId,
       p_member_id: memberId,
       p_sealed_vault_key: "\\xaabbcc",
     });
@@ -153,7 +154,7 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
 
   it("lets the owner wrap a key share for the accepted member", async () => {
     const { data, error } = await clientA.rpc("wrap_key_share_for_member", {
-      p_estate_id: estateAId,
+      p_case_id: estateAId,
       p_member_id: memberId,
       p_sealed_vault_key: "\\xaabbcc",
     });
@@ -161,24 +162,24 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
     expect(data.wrapped_vault_key).not.toBeNull();
   });
 
-  it("denies an unrelated user from revoking another estate's member", async () => {
-    const { error } = await clientB.rpc("revoke_member", { p_estate_id: estateAId, p_member_id: memberId });
+  it("denies an unrelated user from revoking another case's member", async () => {
+    const { error } = await clientB.rpc("revoke_member", { p_case_id: estateAId, p_member_id: memberId });
     expect(error).not.toBeNull();
   });
 
   it("denies the owner revoking themselves", async () => {
     const { data: ownerRow } = await adminClient
-      .from("estate_members")
+      .from("case_members")
       .select("id")
-      .eq("estate_id", estateAId)
-      .eq("role", "owner")
+      .eq("case_id", estateAId)
+      .eq("role", "family")
       .single();
-    const { error } = await clientA.rpc("revoke_member", { p_estate_id: estateAId, p_member_id: ownerRow!.id });
+    const { error } = await clientA.rpc("revoke_member", { p_case_id: estateAId, p_member_id: ownerRow!.id });
     expect(error).not.toBeNull();
   });
 
   it("lets the owner revoke the member — and revocation immediately cuts off further access", async () => {
-    const { data, error } = await clientA.rpc("revoke_member", { p_estate_id: estateAId, p_member_id: memberId });
+    const { data, error } = await clientA.rpc("revoke_member", { p_case_id: estateAId, p_member_id: memberId });
     expect(error).toBeNull();
     expect(data.invite_status).toBe("revoked");
 
@@ -186,7 +187,7 @@ describe("RLS: membership invite/accept/wrap-key-share/revoke flow", () => {
     // audit history and the documented "can't retroactively invalidate"
     // limitation both depend on this.
     const { data: stillExists } = await adminClient
-      .from("estate_members")
+      .from("case_members")
       .select("wrapped_vault_key")
       .eq("id", memberId)
       .single();

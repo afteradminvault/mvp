@@ -43,15 +43,15 @@ describe("RLS: vault key bootstrap and vault item access", () => {
 
     const jurisdictionId = await fetchAnySupportedJurisdictionId();
 
-    const { data: estateA, error: estateAError } = await clientA.rpc("create_estate", {
+    const { data: estateA, error: estateAError } = await clientA.rpc("create_case", {
       p_display_name: "Vault Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
     if (estateAError) throw estateAError;
     estateAId = estateA.id;
 
-    const { error: memberError } = await adminClient.from("estate_members").insert({
-      estate_id: estateAId,
+    const { error: memberError } = await adminClient.from("case_members").insert({
+      case_id: estateAId,
       user_id: userC.id,
       role: "executor",
       invite_email: userC.email,
@@ -70,7 +70,7 @@ describe("RLS: vault key bootstrap and vault item access", () => {
   });
 
   afterAll(async () => {
-    await adminClient.from("estates").delete().eq("id", estateAId);
+    await adminClient.from("cases").delete().eq("id", estateAId);
     await adminClient.auth.admin.deleteUser(userA.id);
     await adminClient.auth.admin.deleteUser(userB.id);
     await adminClient.auth.admin.deleteUser(userC.id);

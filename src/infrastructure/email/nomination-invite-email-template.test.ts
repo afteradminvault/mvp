@@ -17,18 +17,6 @@ describe("renderNominationInviteEmail", () => {
     expect(email.text).toContain("Diane's Estate");
   });
 
-  it("uses Helper-specific language for a helper invite", () => {
-    const email = renderNominationInviteEmail({
-      toEmail: "sister@example.com",
-      estateDisplayName: "Diane's Estate",
-      role: "helper",
-      inviteUrl: "https://example.com/invites/def456",
-    });
-
-    expect(email.subject).toMatch(/Helper/);
-    expect(email.html).toMatch(/without access to the private vault contents/);
-  });
-
   it("escapes HTML-significant characters in the estate display name", () => {
     const email = renderNominationInviteEmail({
       toEmail: "marcus@example.com",

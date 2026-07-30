@@ -7,9 +7,9 @@ export class SupabaseKeyRecoveryRepository implements KeyRecoveryRepository {
 
   async getExecutorKeyRecoveryMaterial(estateId: string, userId: string): Promise<ExecutorKeyRecoveryMaterial | null> {
     const { data: memberRow, error: memberError } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("wrapped_vault_key")
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .eq("user_id", userId)
       .eq("role", "executor")
       .eq("invite_status", "accepted")

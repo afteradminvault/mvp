@@ -42,6 +42,12 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     createdAt: "2026-07-19T00:00:00.000Z",
     updatedAt: "2026-07-24T00:00:00.000Z",
     closedAt: null,
+    deceasedFullName: null,
+    deceasedDateOfBirth: null,
+    deceasedRelationship: null,
+    deceasedDateOfDeath: null,
+    draftStep: null,
+    draftPayload: {},
     ...overrides,
   };
 }

@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       estateId: id,
       actorUserId: session.userId,
       eventType: "member_key_share_wrapped",
-      targetTable: "estate_members",
+      targetTable: "case_members",
       targetId: memberId,
     });
     return NextResponse.json({ member });

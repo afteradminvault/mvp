@@ -54,7 +54,7 @@ export default async function AuditLogPage({
   const membershipService = new MembershipService(new SupabaseMembershipRepository(supabase));
   const members = await membershipService.listMembers(id);
   const viewerRole = members.find((member) => member.userId === user.id)?.role ?? null;
-  const canView = viewerRole === "owner" || viewerRole === "executor";
+  const canView = viewerRole === "family" || viewerRole === "executor";
   const emailByUserId = new Map(
     members.filter((member) => member.userId).map((member) => [member.userId as string, member.inviteEmail]),
   );

@@ -13,8 +13,8 @@ import { adminClient, createConfirmedTestUser, fetchAnySupportedJurisdictionId, 
  * mocking it, since the boundary semantics are fundamentally a database
  * concern.
  *
- * Estates are inserted directly via the service-role client rather than
- * through create_estate() (which requires auth.uid(), i.e. a real signed-in
+ * Cases are inserted directly via the service-role client rather than
+ * through create_case() (which requires auth.uid(), i.e. a real signed-in
  * session — not available to a service-role caller) so last_check_in_at and
  * status can be set to arbitrary values for each boundary case.
  */
@@ -56,7 +56,7 @@ describe("dead-man's-switch: mark_overdue_estates()", () => {
 
     for (const row of rows) {
       const { data, error } = await adminClient
-        .from("estates")
+        .from("cases")
         .insert({
           owner_user_id: owner.id,
           jurisdiction_id: jurisdictionId,
@@ -80,7 +80,7 @@ describe("dead-man's-switch: mark_overdue_estates()", () => {
       .in("estate_id", allEstateIds);
     if (auditError) throw auditError;
 
-    const { error: estatesError } = await adminClient.from("estates").delete().in("id", allEstateIds);
+    const { error: estatesError } = await adminClient.from("cases").delete().in("id", allEstateIds);
     if (estatesError) throw estatesError;
 
     await adminClient.auth.admin.deleteUser(owner.id);
@@ -96,7 +96,7 @@ describe("dead-man's-switch: mark_overdue_estates()", () => {
     expect(transitionedIds).not.toContain(estateIds.closedLongAgo);
 
     const { data: rows, error } = await adminClient
-      .from("estates")
+      .from("cases")
       .select("id, status")
       .in("id", Object.values(estateIds));
     if (error) throw error;

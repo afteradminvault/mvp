@@ -17,12 +17,12 @@ import {
  *
  * Two real auth users are provisioned via the admin API (email_confirm:
  * true, bypassing the signup email-confirmation flow that blocks a session
- * otherwise), each creates their own estate through the real create_estate()
- * RPC (supabase/migrations/20260719120100_rls_policies.sql), and every
- * assertion below runs through the anon-key client authenticated as that
- * specific user — i.e., through the exact RLS policies a real request hits,
- * not the service-role client (which bypasses RLS and is used here only for
- * test setup/teardown).
+ * otherwise), each creates their own case through the real create_case()
+ * RPC (supabase/migrations/20260730000100_case_member_role_and_rls.sql,
+ * was create_estate()), and every assertion below runs through the
+ * anon-key client authenticated as that specific user — i.e., through the
+ * exact RLS policies a real request hits, not the service-role client
+ * (which bypasses RLS and is used here only for test setup/teardown).
  */
 
 describe("RLS: estate isolation between unrelated users", () => {
@@ -47,14 +47,14 @@ describe("RLS: estate isolation between unrelated users", () => {
 
     jurisdictionId = await fetchAnySupportedJurisdictionId();
 
-    const { data: estateA, error: estateAError } = await clientA.rpc("create_estate", {
+    const { data: estateA, error: estateAError } = await clientA.rpc("create_case", {
       p_display_name: "User A's Estate",
       p_jurisdiction_id: jurisdictionId,
     });
     if (estateAError) throw estateAError;
     estateAId = estateA.id;
 
-    const { data: estateB, error: estateBError } = await clientB.rpc("create_estate", {
+    const { data: estateB, error: estateBError } = await clientB.rpc("create_case", {
       p_display_name: "User B's Estate",
       p_jurisdiction_id: jurisdictionId,
     });
@@ -69,13 +69,13 @@ describe("RLS: estate isolation between unrelated users", () => {
     if (assetError) throw assetError;
     assetAId = asset.id;
 
-    // userC is an accepted Executor on estate A — inserted directly via the
+    // userC is an accepted Executor on case A — inserted directly via the
     // service-role client (bypassing RLS) since the invite/accept flow
     // (Development Roadmap Milestone 1 step 5) doesn't exist yet. This tests
-    // wrong-ROLE denial specifically (an accepted, same-estate member who
-    // isn't the owner), distinct from the wrong-ESTATE tests above.
-    const { error: memberError } = await adminClient.from("estate_members").insert({
-      estate_id: estateAId,
+    // wrong-ROLE denial specifically (an accepted, same-case member who
+    // isn't the owner), distinct from the wrong-CASE tests above.
+    const { error: memberError } = await adminClient.from("case_members").insert({
+      case_id: estateAId,
       user_id: userC.id,
       role: "executor",
       invite_email: userC.email,
@@ -87,30 +87,30 @@ describe("RLS: estate isolation between unrelated users", () => {
 
   afterAll(async () => {
     // Service-role client bypasses RLS entirely — used only for cleanup, never
-    // for the assertions above. estates must go before users (owner_user_id
-    // is ON DELETE RESTRICT — see docs/DATABASE_SCHEMA.md §2.3); estate_members
-    // rows (including userC's) cascade-delete with their estate.
-    await adminClient.from("estates").delete().in("id", [estateAId, estateBId]);
+    // for the assertions above. cases must go before users (owner_user_id
+    // is ON DELETE RESTRICT — see docs/DATABASE_SCHEMA.md §2.3); case_members
+    // rows (including userC's) cascade-delete with their case.
+    await adminClient.from("cases").delete().in("id", [estateAId, estateBId]);
     await adminClient.auth.admin.deleteUser(userA.id);
     await adminClient.auth.admin.deleteUser(userB.id);
     await adminClient.auth.admin.deleteUser(userC.id);
   });
 
-  it("lets the owner read their own estate", async () => {
-    const { data, error } = await clientA.from("estates").select("*").eq("id", estateAId).maybeSingle();
+  it("lets the owner read their own case", async () => {
+    const { data, error } = await clientA.from("cases").select("*").eq("id", estateAId).maybeSingle();
     expect(error).toBeNull();
     expect(data?.id).toBe(estateAId);
   });
 
-  it("denies a user reading another user's estate", async () => {
-    const { data, error } = await clientB.from("estates").select("*").eq("id", estateAId).maybeSingle();
+  it("denies a user reading another user's case", async () => {
+    const { data, error } = await clientB.from("cases").select("*").eq("id", estateAId).maybeSingle();
     expect(error).toBeNull();
     expect(data).toBeNull();
   });
 
-  it("denies a user updating another user's estate", async () => {
+  it("denies a user updating another user's case", async () => {
     const { data, error } = await clientB
-      .from("estates")
+      .from("cases")
       .update({ display_name: "Hijacked" })
       .eq("id", estateAId)
       .select("*");
@@ -118,20 +118,59 @@ describe("RLS: estate isolation between unrelated users", () => {
     expect(data).toEqual([]);
 
     const { data: unchanged } = await adminClient
-      .from("estates")
+      .from("cases")
       .select("display_name")
       .eq("id", estateAId)
       .single();
     expect(unchanged?.display_name).toBe("User A's Estate");
   });
 
-  it("denies a user reading another user's estate_members row", async () => {
+  it("denies a user reading another user's case_members row", async () => {
     const { data, error } = await clientB
-      .from("estate_members")
+      .from("case_members")
       .select("*")
-      .eq("estate_id", estateAId);
+      .eq("case_id", estateAId);
     expect(error).toBeNull();
     expect(data).toEqual([]);
+  });
+
+  // --- case_members-specific wrong-role/wrong-case denial (US-1.3's own
+  // acceptance criterion: "an automated RLS test confirms a wrong-role or
+  // wrong-case request is denied") — the digital_assets tests above and
+  // below already exercise the same is_case_member() gate transitively,
+  // but these assert directly against case_members itself.
+  it("denies a user inserting a case_members row for another user's case", async () => {
+    const { data, error } = await clientB
+      .from("case_members")
+      .insert({ case_id: estateAId, role: "executor", invite_email: "intruder@example.com" })
+      .select("id");
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("denies an accepted Executor (wrong role) from updating a fellow case_members row", async () => {
+    const { data, error } = await clientC
+      .from("case_members")
+      .update({ role: "family" })
+      .eq("case_id", estateAId)
+      .eq("user_id", userC.id)
+      .select("*");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+
+    const { data: unchanged } = await adminClient
+      .from("case_members")
+      .select("role")
+      .eq("case_id", estateAId)
+      .eq("user_id", userC.id)
+      .single();
+    expect(unchanged?.role).toBe("executor");
+  });
+
+  it("lets an accepted Executor (right role, right case) read fellow case_members rows", async () => {
+    const { data, error } = await clientC.from("case_members").select("*").eq("case_id", estateAId);
+    expect(error).toBeNull();
+    expect(data?.length).toBeGreaterThan(0);
   });
 
   it("denies a user reading another user's digital_assets", async () => {
@@ -155,9 +194,9 @@ describe("RLS: estate isolation between unrelated users", () => {
     expect(data?.id).toBe(assetAId);
   });
 
-  // --- Wrong-ROLE denial (same estate, accepted member, not the owner) —
-  // digital_assets_write_owner scopes writes to role='owner' specifically,
-  // distinct from the wrong-ESTATE isolation tested above.
+  // --- Wrong-ROLE denial (same case, accepted member, not the owner) —
+  // digital_assets_write_owner scopes writes to role='family' specifically,
+  // distinct from the wrong-CASE isolation tested above.
   it("lets an accepted Executor on the same estate read its digital_assets", async () => {
     const { data, error } = await clientC.from("digital_assets").select("*").eq("id", assetAId).maybeSingle();
     expect(error).toBeNull();

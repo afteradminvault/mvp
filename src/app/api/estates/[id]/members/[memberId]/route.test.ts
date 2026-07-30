@@ -71,7 +71,7 @@ describe("DELETE /api/estates/:id/members/:memberId (revoke)", () => {
   });
 
   it("returns 403 when the caller is not the estate owner", async () => {
-    fakeRepository.revokeMember = vi.fn().mockRejectedValue(new Error("only the estate owner can revoke a member"));
+    fakeRepository.revokeMember = vi.fn().mockRejectedValue(new Error("only the case owner can revoke a member"));
 
     const response = await DELETE(new Request("http://localhost"), routeParams());
     expect(response.status).toBe(403);

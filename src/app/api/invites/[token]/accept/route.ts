@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       estateId: member.estateId,
       actorUserId: session.userId,
       eventType: "member_invite_accepted",
-      targetTable: "estate_members",
+      targetTable: "case_members",
       targetId: member.id,
     });
     return NextResponse.json({ member });

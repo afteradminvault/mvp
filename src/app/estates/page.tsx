@@ -18,7 +18,7 @@ export default async function EstatesPage() {
   const estates = await service.listMyEstates();
 
   if (estates.length === 0) {
-    redirect("/estates/new");
+    redirect("/cases/new");
   }
 
   return (
@@ -26,8 +26,11 @@ export default async function EstatesPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Your estates</h1>
         <div className="flex items-center gap-4">
-          <Link href="/estates/new" className="text-sm underline">
-            + New estate
+          {/* /estates/new (create_case(), status starts active_living) still exists and works, just
+              no longer linked here — /cases/new (create_draft_case(), PRD v2 §3.2 onboarding) is now
+              the primary entry point. See SupabaseEstateRepository's doc comment for why both remain. */}
+          <Link href="/cases/new" className="text-sm underline">
+            + New Case
           </Link>
           <Link href="/account/mfa" className="text-sm underline">
             Two-factor auth

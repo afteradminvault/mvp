@@ -6,7 +6,8 @@
  * milestones.
  */
 
-export type InvitableRole = "executor" | "helper";
+/** Only "executor" is invitable — see the same type in @/domain/membership/ports.ts for why. */
+export type InvitableRole = "executor";
 
 export interface NominationInviteEmailInput {
   toEmail: string;
@@ -39,6 +40,13 @@ export interface ClosureRequestStaleNudgeEmailInput {
   closureRequestUrl: string;
 }
 
+/** PRD v2 §3.2/§6, US-2.5 — sent on the draft -> active_living transition (onboarding completion), not on Case creation itself. */
+export interface CaseSetupConfirmationEmailInput {
+  toEmail: string;
+  caseDisplayName: string;
+  caseUrl: string;
+}
+
 export interface EmailSender {
   /**
    * Best-effort by design: the invite row and its shareable link already
@@ -64,4 +72,11 @@ export interface EmailSender {
    * called.
    */
   sendClosureRequestStaleNudgeEmail(input: ClosureRequestStaleNudgeEmailInput): Promise<boolean>;
+
+  /**
+   * Best-effort, same rationale: a failed/unconfigured send must never
+   * block onboarding completion, which has already happened (draft ->
+   * active_living, via activate_draft_case()) by the time this is called.
+   */
+  sendCaseSetupConfirmationEmail(input: CaseSetupConfirmationEmailInput): Promise<boolean>;
 }

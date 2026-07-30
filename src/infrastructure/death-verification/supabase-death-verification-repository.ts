@@ -19,17 +19,17 @@ export class SupabaseDeathVerificationRepository implements DeathVerificationRep
   }
 
   /**
-   * Reads the owner's estate_members row via the caller's own session
-   * client — estate_members_select_fellow_members RLS already lets any
-   * accepted member (executor/helper included) read every membership row
-   * for their estate, so no privileged/service-role lookup is needed here.
+   * Reads the owner's case_members row via the caller's own session
+   * client — case_members_select_fellow_members RLS already lets any
+   * accepted member (executor included) read every membership row
+   * for their case, so no privileged/service-role lookup is needed here.
    */
   async getOwnerEmail(estateId: string): Promise<string> {
     const { data, error } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("invite_email")
-      .eq("estate_id", estateId)
-      .eq("role", "owner")
+      .eq("case_id", estateId)
+      .eq("role", "family")
       .single();
     if (error) throw error;
     return (data as { invite_email: string }).invite_email;

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 export function InviteMemberForm({ estateId }: { estateId: string }) {
   const router = useRouter();
   const [inviteEmail, setInviteEmail] = useState("");
-  const [role, setRole] = useState<"executor" | "helper">("executor");
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
@@ -17,10 +16,13 @@ export function InviteMemberForm({ estateId }: { estateId: string }) {
     setError(null);
     setInviteUrl(null);
     startTransition(async () => {
+      // Only "executor" is invitable (PRD v2 dropped the view-only Helper
+      // role) — no role picker needed anymore, see InvitableRole in
+      // @/domain/membership/ports.ts.
       const response = await fetch(`/api/estates/${estateId}/members/invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteEmail, role }),
+        body: JSON.stringify({ inviteEmail, role: "executor" }),
       });
       const result = await response.json();
       if (!response.ok) {
@@ -45,17 +47,6 @@ export function InviteMemberForm({ estateId }: { estateId: string }) {
           onChange={(event) => setInviteEmail(event.target.value)}
           className="rounded border border-gray-300 px-3 py-2"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Role
-        <select
-          value={role}
-          onChange={(event) => setRole(event.target.value as "executor" | "helper")}
-          className="rounded border border-gray-300 px-3 py-2"
-        >
-          <option value="executor">Executor</option>
-          <option value="helper">Helper (view-only, no vault access)</option>
-        </select>
       </label>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {inviteUrl && (

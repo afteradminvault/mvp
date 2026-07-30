@@ -49,7 +49,7 @@ describe("GET /api/estates/:id/members/keys", () => {
   it("returns 403 when the caller is not the estate owner", async () => {
     fakeRepository.getMemberPublicKeys = vi
       .fn()
-      .mockRejectedValue(new Error("only the estate owner can access this"));
+      .mockRejectedValue(new Error("only the case owner can access this"));
 
     const response = await GET(new Request("http://localhost"), routeParams());
     expect(response.status).toBe(403);

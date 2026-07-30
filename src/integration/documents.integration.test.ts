@@ -22,11 +22,9 @@ import {
 describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
   let owner: TestUser;
   let executor: TestUser;
-  let helper: TestUser;
   let outsider: TestUser;
   let ownerClient: SupabaseClient;
   let executorClient: SupabaseClient;
-  let helperClient: SupabaseClient;
   let outsiderClient: SupabaseClient;
   let estateId: string;
   let uploadedDocumentId: string;
@@ -37,41 +35,33 @@ describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
   beforeAll(async () => {
     owner = await createConfirmedTestUser();
     executor = await createConfirmedTestUser();
-    helper = await createConfirmedTestUser();
     outsider = await createConfirmedTestUser();
     ownerClient = await signedInClient(owner.email, owner.password);
     executorClient = await signedInClient(executor.email, executor.password);
-    helperClient = await signedInClient(helper.email, helper.password);
     outsiderClient = await signedInClient(outsider.email, outsider.password);
 
     const jurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: estate, error: estateError } = await ownerClient.rpc("create_estate", {
+    const { data: estate, error: estateError } = await ownerClient.rpc("create_case", {
       p_display_name: "Documents Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
     if (estateError) throw estateError;
     estateId = estate.id;
 
-    for (const [invitee, role] of [
-      [executor, "executor"],
-      [helper, "helper"],
-    ] as const) {
-      const { data: member, error: inviteError } = await ownerClient.rpc("invite_member", {
-        p_estate_id: estateId,
-        p_invite_email: invitee.email,
-        p_role: role,
-      });
-      if (inviteError) throw inviteError;
+    const { data: member, error: inviteError } = await ownerClient.rpc("invite_member", {
+      p_case_id: estateId,
+      p_invite_email: executor.email,
+      p_role: "executor",
+    });
+    if (inviteError) throw inviteError;
 
-      const client = role === "executor" ? executorClient : helperClient;
-      const { error: acceptError } = await client.rpc("accept_invite", {
-        p_token: member.invite_token,
-        p_public_key: "\\xaabbcc",
-        p_wrapped_private_key: "\\x112233",
-        p_kdf_salt: "\\x445566",
-      });
-      if (acceptError) throw acceptError;
-    }
+    const { error: acceptError } = await executorClient.rpc("accept_invite", {
+      p_token: member.invite_token,
+      p_public_key: "\\xaabbcc",
+      p_wrapped_private_key: "\\x112233",
+      p_kdf_salt: "\\x445566",
+    });
+    if (acceptError) throw acceptError;
   }, 20_000);
 
   afterAll(async () => {
@@ -82,23 +72,10 @@ describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
       `${estateId}/${attachedDocumentId}`,
     ]);
     await adminClient.from("documents").delete().eq("estate_id", estateId);
-    await adminClient.from("estates").delete().eq("id", estateId);
+    await adminClient.from("cases").delete().eq("id", estateId);
     await adminClient.auth.admin.deleteUser(owner.id);
     await adminClient.auth.admin.deleteUser(executor.id);
-    await adminClient.auth.admin.deleteUser(helper.id);
     await adminClient.auth.admin.deleteUser(outsider.id);
-  });
-
-  it("denies a helper from uploading a document", async () => {
-    const repository = new SupabaseDocumentRepository(helperClient);
-    await expect(
-      repository.uploadDocument(estateId, helper.id, {
-        documentType: "other",
-        fileName: "note.pdf",
-        mimeType: "application/pdf",
-        fileBytes: new Uint8Array([1, 2, 3]),
-      }),
-    ).rejects.toThrow();
   });
 
   it("lets an executor upload a document, storing the row and the storage object", async () => {
@@ -182,13 +159,13 @@ describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
   });
 
   it("cannot skip the gate via a raw status update either (guard trigger)", async () => {
-    const { error } = await ownerClient.from("estates").update({ status: "active_executor" }).eq("id", estateId);
+    const { error } = await ownerClient.from("cases").update({ status: "active_executor" }).eq("id", estateId);
     expect(error).not.toBeNull();
   });
 
   it("drives the estate to awaiting_death_certificate via the real sweep functions", async () => {
     const { error: seedError } = await adminClient
-      .from("estates")
+      .from("cases")
       .update({ check_in_interval_days: 1, grace_period_days: 1, last_check_in_at: daysAgo(10) })
       .eq("id", estateId);
     if (seedError) throw seedError;
@@ -199,7 +176,7 @@ describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
     if (escalateError) throw escalateError;
 
     const { error: windowSeedError } = await adminClient
-      .from("estates")
+      .from("cases")
       .update({ self_cancel_window_days: 1, verification_started_at: daysAgo(10) })
       .eq("id", estateId);
     if (windowSeedError) throw windowSeedError;
@@ -207,7 +184,7 @@ describe("RLS + Storage: documents CRUD and the death-certificate gate", () => {
     const { error: lapsedError } = await adminClient.rpc("escalate_lapsed_verifications");
     if (lapsedError) throw lapsedError;
 
-    const { data } = await adminClient.from("estates").select("status").eq("id", estateId).single();
+    const { data } = await adminClient.from("cases").select("status").eq("id", estateId).single();
     expect(data?.status).toBe("awaiting_death_certificate");
   });
 

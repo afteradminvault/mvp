@@ -17,7 +17,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { name, defaultCategory, websiteUrl, notes } = body as Record<string, unknown>;
+  const {
+    name,
+    defaultCategory,
+    websiteUrl,
+    notes,
+    closureMethod,
+    bereavementContactEmail,
+    bereavementContactPhone,
+    bereavementInstructionsUrl,
+    logoUrl,
+    isCommonOnboardingPlatform,
+  } = body as Record<string, unknown>;
   if (name !== undefined && typeof name !== "string") {
     return NextResponse.json({ error: "name must be a string if provided." }, { status: 400 });
   }
@@ -30,6 +41,36 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (notes !== undefined && notes !== null && typeof notes !== "string") {
     return NextResponse.json({ error: "notes must be a string if provided." }, { status: 400 });
   }
+  if (closureMethod !== undefined && closureMethod !== null && typeof closureMethod !== "string") {
+    return NextResponse.json({ error: "closureMethod must be a string if provided." }, { status: 400 });
+  }
+  if (
+    bereavementContactEmail !== undefined &&
+    bereavementContactEmail !== null &&
+    typeof bereavementContactEmail !== "string"
+  ) {
+    return NextResponse.json({ error: "bereavementContactEmail must be a string if provided." }, { status: 400 });
+  }
+  if (
+    bereavementContactPhone !== undefined &&
+    bereavementContactPhone !== null &&
+    typeof bereavementContactPhone !== "string"
+  ) {
+    return NextResponse.json({ error: "bereavementContactPhone must be a string if provided." }, { status: 400 });
+  }
+  if (
+    bereavementInstructionsUrl !== undefined &&
+    bereavementInstructionsUrl !== null &&
+    typeof bereavementInstructionsUrl !== "string"
+  ) {
+    return NextResponse.json({ error: "bereavementInstructionsUrl must be a string if provided." }, { status: 400 });
+  }
+  if (logoUrl !== undefined && logoUrl !== null && typeof logoUrl !== "string") {
+    return NextResponse.json({ error: "logoUrl must be a string if provided." }, { status: 400 });
+  }
+  if (isCommonOnboardingPlatform !== undefined && typeof isCommonOnboardingPlatform !== "boolean") {
+    return NextResponse.json({ error: "isCommonOnboardingPlatform must be a boolean if provided." }, { status: 400 });
+  }
 
   const service = new AdminProviderService(new SupabaseAdminProviderRepository(session.supabase));
   try {
@@ -38,6 +79,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       defaultCategory: defaultCategory as AssetCategory | undefined,
       websiteUrl: websiteUrl as string | null | undefined,
       notes: notes as string | null | undefined,
+      closureMethod: closureMethod as never,
+      bereavementContactEmail: bereavementContactEmail as string | null | undefined,
+      bereavementContactPhone: bereavementContactPhone as string | null | undefined,
+      bereavementInstructionsUrl: bereavementInstructionsUrl as string | null | undefined,
+      logoUrl: logoUrl as string | null | undefined,
+      isCommonOnboardingPlatform: isCommonOnboardingPlatform as boolean | undefined,
     });
     return NextResponse.json({ provider });
   } catch (error) {

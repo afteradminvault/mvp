@@ -49,13 +49,21 @@ export default async function EstateDetailPage({
   ]);
 
   const viewerRole = members.find((member) => member.userId === user.id)?.role ?? null;
-  const isOwner = viewerRole === "owner";
-  const isExecutorOrHelper = viewerRole === "executor" || viewerRole === "helper";
-  const canReportDeath = isExecutorOrHelper && (estate.status === "active_living" || estate.status === "checkin_overdue");
+  // isOwner keys off estate.ownerUserId directly, not viewerRole === "family"
+  // — the two currently always coincide (there's no invite path onto a
+  // second "family" row, per invite_member()'s own guard), but this
+  // matches report_death()'s own authorization check (which the two lines
+  // below mirror) rather than relying on that coincidence.
+  const isOwner = estate.ownerUserId === user.id;
+  const isExecutor = viewerRole === "executor";
+  const canReportDeathAsOtherFamilyMember = viewerRole === "family" && !isOwner;
+  const canReportDeath =
+    (isExecutor || canReportDeathAsOtherFamilyMember) &&
+    (estate.status === "active_living" || estate.status === "checkin_overdue");
   const canSelfCancel = isOwner && estate.status === "verifying";
-  const canRecoverKey = viewerRole === "executor" && estate.status === "active_executor";
+  const canRecoverKey = isExecutor && estate.status === "active_executor";
   const verificationInProgress =
-    isExecutorOrHelper &&
+    (isExecutor || canReportDeathAsOtherFamilyMember) &&
     (estate.status === "death_reported" || estate.status === "verifying" || estate.status === "awaiting_death_certificate");
 
   return (
@@ -159,7 +167,7 @@ export default async function EstateDetailPage({
         </div>
       </div>
 
-      {(isOwner || viewerRole === "executor") && (
+      {(isOwner || isExecutor) && (
         <div className="mt-6 rounded border border-gray-300 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">Audit log</h2>

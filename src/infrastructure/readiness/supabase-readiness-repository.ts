@@ -20,14 +20,14 @@ export class SupabaseReadinessRepository implements ReadinessRepository {
     }
 
     const { data: ownerRow, error: ownerRowError } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("role")
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .eq("user_id", user.id)
       .maybeSingle();
     if (ownerRowError) throw ownerRowError;
-    if (!ownerRow || ownerRow.role !== "owner") {
-      throw new Error("only the estate owner can view this estate's readiness score");
+    if (!ownerRow || ownerRow.role !== "family") {
+      throw new Error("only the case owner can view this case's readiness score");
     }
 
     const { count: totalAssetCount, error: totalError } = await this.supabase
@@ -46,17 +46,17 @@ export class SupabaseReadinessRepository implements ReadinessRepository {
     if (instructionsError) throw instructionsError;
 
     const { count: acceptedExecutorCount, error: executorError } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("*", { count: "exact", head: true })
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .eq("role", "executor")
       .eq("invite_status", "accepted");
     if (executorError) throw executorError;
 
     const { count: acceptedBackupExecutorCount, error: backupError } = await this.supabase
-      .from("estate_members")
+      .from("case_members")
       .select("*", { count: "exact", head: true })
-      .eq("estate_id", estateId)
+      .eq("case_id", estateId)
       .eq("role", "executor")
       .eq("invite_status", "accepted")
       .not("fallback_order", "is", null);

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
-export type VaultSessionRole = "owner" | "executor";
+export type VaultSessionRole = "family" | "executor";
 
 interface VaultSessionValue {
   /** Unwrapped Vault Key, held only in memory for this tab — never persisted anywhere. */

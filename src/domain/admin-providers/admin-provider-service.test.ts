@@ -24,6 +24,12 @@ function makeProvider(overrides: Partial<AdminProvider> = {}): AdminProvider {
     defaultCategory: "financial",
     websiteUrl: null,
     notes: null,
+    closureMethod: null,
+    bereavementContactEmail: null,
+    bereavementContactPhone: null,
+    bereavementInstructionsUrl: null,
+    logoUrl: null,
+    isCommonOnboardingPlatform: false,
     ...overrides,
   };
 }
@@ -41,6 +47,12 @@ describe("AdminProviderService.createProvider", () => {
       defaultCategory: "financial",
       websiteUrl: null,
       notes: null,
+      closureMethod: null,
+      bereavementContactEmail: null,
+      bereavementContactPhone: null,
+      bereavementInstructionsUrl: null,
+      logoUrl: null,
+      isCommonOnboardingPlatform: false,
     });
     expect(result).toBe(provider);
   });

@@ -28,10 +28,17 @@ import {
 describe("closure requests: checklist snapshot, RBAC, and document attachment", () => {
   let owner: TestUser;
   let executor: TestUser;
-  let helper: TestUser;
+  // Stands in for v1's accepted-Helper case — PRD v2 dropped that role
+  // (folded into "family"); there's no invite path onto a second family
+  // row, so this is inserted directly via the service-role client, same
+  // pattern as rls-estate-isolation.integration.test.ts's executor row.
+  // Still proves what matters here: closure_requests_select_member has no
+  // role restriction (any accepted member reads), only
+  // closure_requests_write_executor does.
+  let otherFamilyMember: TestUser;
   let ownerClient: SupabaseClient;
   let executorClient: SupabaseClient;
-  let helperClient: SupabaseClient;
+  let otherFamilyMemberClient: SupabaseClient;
   let estateId: string;
   let jurisdictionId: string;
   let assetId: string;
@@ -56,38 +63,42 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
   beforeAll(async () => {
     owner = await createConfirmedTestUser();
     executor = await createConfirmedTestUser();
-    helper = await createConfirmedTestUser();
+    otherFamilyMember = await createConfirmedTestUser();
     ownerClient = await signedInClient(owner.email, owner.password);
     executorClient = await signedInClient(executor.email, executor.password);
-    helperClient = await signedInClient(helper.email, helper.password);
+    otherFamilyMemberClient = await signedInClient(otherFamilyMember.email, otherFamilyMember.password);
 
     jurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: estate, error: estateError } = await ownerClient.rpc("create_estate", {
+    const { data: estate, error: estateError } = await ownerClient.rpc("create_case", {
       p_display_name: "Closure Request Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
     if (estateError) throw estateError;
     estateId = estate.id;
 
-    for (const [invitee, role] of [
-      [executor, "executor"],
-      [helper, "helper"],
-    ] as const) {
-      const { data: member, error: inviteError } = await ownerClient.rpc("invite_member", {
-        p_estate_id: estateId,
-        p_invite_email: invitee.email,
-        p_role: role,
-      });
-      if (inviteError) throw inviteError;
-      const client = role === "executor" ? executorClient : helperClient;
-      const { error: acceptError } = await client.rpc("accept_invite", {
-        p_token: member.invite_token,
-        p_public_key: "\\xaabbcc",
-        p_wrapped_private_key: "\\x112233",
-        p_kdf_salt: "\\x445566",
-      });
-      if (acceptError) throw acceptError;
-    }
+    const { data: member, error: inviteError } = await ownerClient.rpc("invite_member", {
+      p_case_id: estateId,
+      p_invite_email: executor.email,
+      p_role: "executor",
+    });
+    if (inviteError) throw inviteError;
+    const { error: acceptError } = await executorClient.rpc("accept_invite", {
+      p_token: member.invite_token,
+      p_public_key: "\\xaabbcc",
+      p_wrapped_private_key: "\\x112233",
+      p_kdf_salt: "\\x445566",
+    });
+    if (acceptError) throw acceptError;
+
+    const { error: otherFamilyMemberError } = await adminClient.from("case_members").insert({
+      case_id: estateId,
+      user_id: otherFamilyMember.id,
+      role: "family",
+      invite_email: otherFamilyMember.email,
+      invite_status: "accepted",
+      accepted_at: new Date().toISOString(),
+    });
+    if (otherFamilyMemberError) throw otherFamilyMemberError;
 
     const uniqueSuffix = randomUUID();
     const { data: matchingProvider, error: providerError } = await adminClient
@@ -181,15 +192,15 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
       .from("legal_requirements")
       .delete()
       .in("id", [genericRequirementId, providerRequirementId, otherProviderRequirementId, futureRequirementId]);
-    await adminClient.from("estates").delete().eq("id", estateId);
+    await adminClient.from("cases").delete().eq("id", estateId);
     await adminClient.from("providers").delete().in("id", [matchingProviderId, otherProviderId]);
     await adminClient.auth.admin.deleteUser(owner.id);
     await adminClient.auth.admin.deleteUser(executor.id);
-    await adminClient.auth.admin.deleteUser(helper.id);
+    await adminClient.auth.admin.deleteUser(otherFamilyMember.id);
   }, 20_000);
 
-  it("denies the helper from creating a closure request", async () => {
-    await expect(service(helperClient).createClosureRequest(estateId, assetId)).rejects.toThrow();
+  it("denies a non-executor family member from creating a closure request", async () => {
+    await expect(service(otherFamilyMemberClient).createClosureRequest(estateId, assetId)).rejects.toThrow();
   });
 
   it("denies the owner from creating a closure request (executor-only per API spec §10)", async () => {
@@ -212,9 +223,9 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
     expect(request.resolvedAt).toBeNull();
   });
 
-  it("lets any accepted member (including Helper) read the closure request list", async () => {
-    const helperView = await service(helperClient).listClosureRequests(estateId);
-    expect(helperView.map((r) => r.id)).toContain(closureRequestId);
+  it("lets any accepted member (including a non-executor family member) read the closure request list", async () => {
+    const otherFamilyMemberView = await service(otherFamilyMemberClient).listClosureRequests(estateId);
+    expect(otherFamilyMemberView.map((r) => r.id)).toContain(closureRequestId);
 
     const filtered = await service(executorClient).listClosureRequests(estateId, { category: "financial" });
     expect(filtered.map((r) => r.id)).toContain(closureRequestId);
@@ -223,9 +234,9 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
     expect(wrongCategory.map((r) => r.id)).not.toContain(closureRequestId);
   });
 
-  it("denies the helper from updating status", async () => {
+  it("denies a non-executor family member from updating status", async () => {
     await expect(
-      service(helperClient).updateClosureRequest(closureRequestId, { status: "submitted" }),
+      service(otherFamilyMemberClient).updateClosureRequest(closureRequestId, { status: "submitted" }),
     ).rejects.toThrow();
   });
 
@@ -268,7 +279,7 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
 
   it("rejects attaching a document that belongs to a different estate", async () => {
     const otherJurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: otherEstate, error: otherEstateError } = await ownerClient.rpc("create_estate", {
+    const { data: otherEstate, error: otherEstateError } = await ownerClient.rpc("create_case", {
       p_display_name: "Closure Request Test — Other Estate",
       p_jurisdiction_id: otherJurisdictionId,
     });
@@ -285,11 +296,13 @@ describe("closure requests: checklist snapshot, RBAC, and document attachment", 
 
     await adminClient.storage.from("documents").remove([`${otherEstate.id}/${otherDocument.id}`]);
     await adminClient.from("documents").delete().eq("id", otherDocument.id);
-    await adminClient.from("estates").delete().eq("id", otherEstate.id);
+    await adminClient.from("cases").delete().eq("id", otherEstate.id);
   });
 
-  it("denies the helper from attaching documents", async () => {
-    await expect(service(helperClient).attachDocument(closureRequestId, ownEstateDocumentId)).rejects.toThrow();
+  it("denies a non-executor family member from attaching documents", async () => {
+    await expect(
+      service(otherFamilyMemberClient).attachDocument(closureRequestId, ownEstateDocumentId),
+    ).rejects.toThrow();
   });
 });
 
@@ -323,7 +336,7 @@ describe("closure requests: stale-request nudge sweep (mark_stale_closure_reques
     executorClient = await signedInClient(executor.email, executor.password);
 
     const jurisdictionId = await fetchAnySupportedJurisdictionId();
-    const { data: estate, error: estateError } = await ownerClient.rpc("create_estate", {
+    const { data: estate, error: estateError } = await ownerClient.rpc("create_case", {
       p_display_name: "Stale Nudge Test Estate",
       p_jurisdiction_id: jurisdictionId,
     });
@@ -331,7 +344,7 @@ describe("closure requests: stale-request nudge sweep (mark_stale_closure_reques
     estateId = estate.id;
 
     const { data: member, error: inviteError } = await ownerClient.rpc("invite_member", {
-      p_estate_id: estateId,
+      p_case_id: estateId,
       p_invite_email: executor.email,
       p_role: "executor",
     });
@@ -362,7 +375,7 @@ describe("closure requests: stale-request nudge sweep (mark_stale_closure_reques
   }, 30_000);
 
   afterAll(async () => {
-    await adminClient.from("estates").delete().eq("id", estateId);
+    await adminClient.from("cases").delete().eq("id", estateId);
     await adminClient.auth.admin.deleteUser(owner.id);
     await adminClient.auth.admin.deleteUser(executor.id);
   }, 20_000);

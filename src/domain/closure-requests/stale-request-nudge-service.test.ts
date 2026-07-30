@@ -33,6 +33,12 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     closedAt: null,
+    deceasedFullName: null,
+    deceasedDateOfBirth: null,
+    deceasedRelationship: null,
+    deceasedDateOfDeath: null,
+    draftStep: null,
+    draftPayload: {},
     ...overrides,
   };
 }
@@ -165,7 +171,7 @@ describe("StaleClosureRequestNudgeService.sendNudges", () => {
         listMembers: vi.fn().mockResolvedValue([
           makeMember({ userId: "user-executor", inviteEmail: "one@example.com" }),
           makeMember({ id: "member-2", userId: "user-other-executor", inviteEmail: "two@example.com" }),
-          makeMember({ id: "member-3", role: "helper", inviteEmail: "helper@example.com", userId: "user-helper" }),
+          makeMember({ id: "member-3", role: "family", inviteEmail: "family@example.com", userId: "user-family" }),
         ]),
       },
       emailSender: { sendClosureRequestStaleNudgeEmail },

@@ -5,9 +5,19 @@
  * src/crypto/encoding.ts) this layer never interprets.
  */
 
-export type MemberRole = "owner" | "executor" | "helper";
+/**
+ * "family" replaces v1's "owner" (the case creator) per PRD v2 §0/§8 Q3 —
+ * the view-only "helper" role is dropped, folded into "family" (every
+ * invited Family member has full access, PRD v2 §2's stated default).
+ * "Admin" (AfterVault staff) is deliberately not a value here — it's the
+ * separate, non-case-scoped platform_admins mechanism (Database Schema,
+ * supabase/migrations/20260719120100_rls_policies.sql), never a
+ * case_members row.
+ */
+export type MemberRole = "family" | "executor";
 export type InviteStatus = "pending" | "accepted" | "revoked";
-export type InvitableRole = "executor" | "helper";
+/** Only "executor" is invitable — the case creator ("family") is established at case-creation time, not invited (see invite_member()'s own "cannot invite a second family creator" guard). */
+export type InvitableRole = "executor";
 
 export interface EstateMember {
   id: string;

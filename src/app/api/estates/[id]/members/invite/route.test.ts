@@ -60,6 +60,12 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     createdAt: "2026-07-21T00:00:00.000Z",
     updatedAt: "2026-07-21T00:00:00.000Z",
     closedAt: null,
+    deceasedFullName: null,
+    deceasedDateOfBirth: null,
+    deceasedRelationship: null,
+    deceasedDateOfDeath: null,
+    draftStep: null,
+    draftPayload: {},
     ...overrides,
   };
 }
@@ -111,6 +117,9 @@ beforeEach(() => {
     recordCheckIn: vi.fn(),
     listMyEstates: vi.fn(),
     listSupportedJurisdictions: vi.fn(),
+    createDraftCase: vi.fn(),
+    saveDraftProgress: vi.fn(),
+    activateDraftCase: vi.fn(),
   };
   sendNominationInviteEmailMock.mockResolvedValue(false);
   requireSessionMock.mockResolvedValue({ supabase: {}, userId: "user-1" });
@@ -144,7 +153,7 @@ describe("POST /api/estates/:id/members/invite", () => {
   it("returns 403 when the caller is not the estate owner", async () => {
     fakeMembershipRepository.inviteMember = vi
       .fn()
-      .mockRejectedValue(new Error("only the estate owner can invite members"));
+      .mockRejectedValue(new Error("only the case owner can invite members"));
 
     const response = await POST(postRequest({ inviteEmail: "marcus@example.com", role: "executor" }), routeParams());
     expect(response.status).toBe(403);

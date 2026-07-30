@@ -85,7 +85,7 @@ describe("MembershipService.inviteMember", () => {
 
   it("translates a repository forbidden error", async () => {
     const repository = createFakeRepository({
-      inviteMember: vi.fn().mockRejectedValue(new Error("only the estate owner can invite members")),
+      inviteMember: vi.fn().mockRejectedValue(new Error("only the case owner can invite members")),
     });
     const service = new MembershipService(repository);
 
@@ -208,9 +208,9 @@ describe("MembershipService.revokeMember", () => {
     await expect(service.revokeMember("estate-1", "member-1")).resolves.toBe(member);
   });
 
-  it("translates a repository 'cannot revoke the estate owner' error", async () => {
+  it("translates a repository 'cannot revoke the case owner' error", async () => {
     const repository = createFakeRepository({
-      revokeMember: vi.fn().mockRejectedValue(new Error("cannot revoke the estate owner")),
+      revokeMember: vi.fn().mockRejectedValue(new Error("cannot revoke the case owner")),
     });
     const service = new MembershipService(repository);
 

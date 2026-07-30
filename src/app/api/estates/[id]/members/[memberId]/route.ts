@@ -26,7 +26,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       estateId: id,
       actorUserId: session.userId,
       eventType: "member_revoked",
-      targetTable: "estate_members",
+      targetTable: "case_members",
       targetId: memberId,
     });
     return NextResponse.json({ member });
