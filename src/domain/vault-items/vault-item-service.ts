@@ -8,11 +8,12 @@ import type {
 
 export const VAULT_ITEM_TYPES: readonly VaultItemType[] = [
   "password",
-  "recovery_code",
-  "security_question",
-  "note",
-  "seed_phrase",
-  "other",
+  "crypto_seed_phrase",
+  "bank_detail",
+  "domain_login",
+  "subscription",
+  "brokerage_account",
+  "custom",
 ];
 
 // Generous enough for any realistic vault item (password, recovery code,

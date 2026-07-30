@@ -222,7 +222,7 @@ describe("key-recovery + RBAC: executor unwrap chain, asset/vault-item read path
   it("denies the executor from creating a vault item (write is owner-only, API spec §6)", async () => {
     await expect(
       new SupabaseVaultItemRepository(executorClient).createItem(assetId, {
-        itemType: "note",
+        itemType: "custom",
         ciphertext: "aabb",
         encryptionIv: "ccdd",
         wrappedDataKey: "eeff",

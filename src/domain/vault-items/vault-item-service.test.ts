@@ -3,6 +3,7 @@ import type { DigitalVaultItem, VaultItemRepository } from "./ports";
 import {
   InvalidVaultItemInputError,
   MAX_HEX_FIELD_LENGTH,
+  VAULT_ITEM_TYPES,
   VaultItemNotFoundError,
   VaultItemService,
 } from "./vault-item-service";
@@ -53,6 +54,22 @@ describe("VaultItemService.createItem", () => {
       wrappedDataKey: "445566",
       keyVersion: undefined,
     });
+    expect(result).toBe(item);
+  });
+
+  it.each(VAULT_ITEM_TYPES)("accepts the %s item type (US-3.1's full 7-type set)", async (itemType) => {
+    const item = makeItem({ itemType });
+    const repository = createFakeRepository({ createItem: vi.fn().mockResolvedValue(item) });
+    const service = new VaultItemService(repository);
+
+    const result = await service.createItem("asset-1", {
+      itemType,
+      ciphertext: "aabbcc",
+      encryptionIv: "112233",
+      wrappedDataKey: "445566",
+    });
+
+    expect(repository.createItem).toHaveBeenCalledWith("asset-1", expect.objectContaining({ itemType }));
     expect(result).toBe(item);
   });
 

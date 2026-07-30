@@ -2,7 +2,15 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 
-const ITEM_TYPES = ["password", "recovery_code", "security_question", "note", "seed_phrase", "other"] as const;
+const ITEM_TYPES = [
+  "password",
+  "crypto_seed_phrase",
+  "bank_detail",
+  "domain_login",
+  "subscription",
+  "brokerage_account",
+  "custom",
+] as const;
 
 export function AddVaultItemForm({
   estateId,
