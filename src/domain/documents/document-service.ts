@@ -8,6 +8,8 @@ export const DOCUMENT_TYPES: readonly DocumentType[] = [
   "small_estate_affidavit",
   "executor_government_id",
   "notarized_affidavit",
+  "notification_letter",
+  "will",
   "other",
 ];
 

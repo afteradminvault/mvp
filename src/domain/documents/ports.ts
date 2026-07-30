@@ -17,6 +17,8 @@ export type DocumentType =
   | "small_estate_affidavit"
   | "executor_government_id"
   | "notarized_affidavit"
+  | "notification_letter"
+  | "will"
   | "other";
 
 export interface Document {

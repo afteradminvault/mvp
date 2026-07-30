@@ -47,6 +47,13 @@ export interface CaseSetupConfirmationEmailInput {
   caseUrl: string;
 }
 
+/** US-6.4 — recipient is the platform's own bereavement_contact_email, not a case member. `content` is the letter's own text, possibly edited by the Family member (US-6.3) beyond what auto-fill produced. */
+export interface NotificationLetterEmailInput {
+  toEmail: string;
+  subject: string;
+  content: string;
+}
+
 export interface EmailSender {
   /**
    * Best-effort by design: the invite row and its shareable link already
@@ -79,4 +86,11 @@ export interface EmailSender {
    * active_living, via activate_draft_case()) by the time this is called.
    */
   sendCaseSetupConfirmationEmail(input: CaseSetupConfirmationEmailInput): Promise<boolean>;
+
+  /**
+   * Best-effort, same rationale: a failed/unconfigured send must never
+   * block letter finalization, which has already happened (the PDF is
+   * already generated and stored) by the time this is called.
+   */
+  sendNotificationLetterEmail(input: NotificationLetterEmailInput): Promise<boolean>;
 }
