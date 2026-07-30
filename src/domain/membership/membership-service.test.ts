@@ -197,6 +197,17 @@ describe("MembershipService.wrapKeyShareForMember", () => {
       MembershipNotFoundError,
     );
   });
+
+  it("translates the not-fully-verified gate (US-4 verification requirement) as forbidden", async () => {
+    const repository = createFakeRepository({
+      wrapKeyShareForMember: vi.fn().mockRejectedValue(new Error("this executor has not completed verification yet")),
+    });
+    const service = new MembershipService(repository);
+
+    await expect(service.wrapKeyShareForMember("estate-1", "member-1", "aabbcc")).rejects.toThrow(
+      MembershipForbiddenError,
+    );
+  });
 });
 
 describe("MembershipService.revokeMember", () => {

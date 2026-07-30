@@ -4,6 +4,11 @@ import { EstateService } from "@/domain/estates/estate-service";
 import { SupabaseEstateRepository } from "@/infrastructure/estates/supabase-estate-repository";
 import { MembershipService } from "@/domain/membership/membership-service";
 import { SupabaseMembershipRepository } from "@/infrastructure/membership/supabase-membership-repository";
+import {
+  ExecutorVerificationNotFoundError,
+  ExecutorVerificationService,
+} from "@/domain/executor-verification/executor-verification-service";
+import { SupabaseExecutorVerificationRepository } from "@/infrastructure/executor-verification/supabase-executor-verification-repository";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
 import { InviteMemberForm } from "./invite-member-form";
 import { MemberRow } from "./member-row";
@@ -24,6 +29,24 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
   const service = new MembershipService(new SupabaseMembershipRepository(supabase));
   const members = await service.listMembers(id);
 
+  const verificationService = new ExecutorVerificationService(new SupabaseExecutorVerificationRepository(supabase));
+  const verifications = await Promise.all(
+    members
+      .filter((member) => member.role === "executor")
+      .map(async (member) => {
+        try {
+          return [member.id, await verificationService.getVerification(id, member.id)] as const;
+        } catch (error) {
+          if (error instanceof ExecutorVerificationNotFoundError) return [member.id, null] as const;
+          throw error;
+        }
+      }),
+  );
+  const verificationByMemberId = Object.fromEntries(verifications);
+
+  const viewerMember = members.find((member) => member.userId === user.id);
+  const isFamilyViewer = viewerMember?.role === "family";
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <Link href={`/estates/${id}`} className="text-sm underline">
@@ -36,7 +59,14 @@ export default async function MembersPage({ params }: { params: Promise<{ id: st
       ) : (
         <ul className="mb-8 flex flex-col gap-3">
           {members.map((member) => (
-            <MemberRow key={member.id} estateId={id} member={member} />
+            <MemberRow
+              key={member.id}
+              estateId={id}
+              member={member}
+              verification={verificationByMemberId[member.id] ?? null}
+              isFamilyViewer={isFamilyViewer}
+              isSelf={member.userId === user.id}
+            />
           ))}
         </ul>
       )}

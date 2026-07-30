@@ -60,7 +60,11 @@ function validateToken(token: unknown): string {
 /** Every RPC in this domain raises a plain Postgres exception; this maps their messages to typed errors, once, in one place. */
 function translateRepositoryError(error: unknown): never {
   if (error instanceof Error) {
-    if (/only the case owner|cannot invite a second family creator|cannot revoke the case owner/i.test(error.message)) {
+    if (
+      /only the case owner|cannot invite a second family creator|cannot revoke the case owner|has not completed verification yet/i.test(
+        error.message,
+      )
+    ) {
       throw new MembershipForbiddenError(error.message);
     }
     if (/not found or not yet accepted|^member not found$/i.test(error.message)) {
