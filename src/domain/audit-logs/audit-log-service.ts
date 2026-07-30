@@ -73,6 +73,14 @@ function validateOffset(value: unknown): number {
   return parsed;
 }
 
+function validateActorUserId(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string") {
+    throw new InvalidAuditLogQueryError("actorUserId must be a string if provided.");
+  }
+  return value.trim();
+}
+
 /**
  * Orchestrates the read-only audit-log view (Database Schema §6.1, API
  * Specification §13, Security Architecture §3.3's dispute-resolution/
@@ -99,5 +107,27 @@ export class AuditLogService {
     const offset = validateOffset(query.offset);
 
     return this.repository.listAuditLogs(estateId, { eventType, from, to, limit, offset });
+  }
+
+  /** US-8.7 — the system-wide admin view (audit_logs_select_admin RLS gates this to platform admins). */
+  async listAllAuditLogs(query: {
+    eventType?: unknown;
+    actorUserId?: unknown;
+    from?: unknown;
+    to?: unknown;
+    limit?: unknown;
+    offset?: unknown;
+  }): Promise<AuditLogListResult> {
+    const eventType = validateEventType(query.eventType);
+    const actorUserId = validateActorUserId(query.actorUserId);
+    const from = validateDateBound(query.from, "from");
+    const to = validateDateBound(query.to, "to");
+    if (from !== undefined && to !== undefined && new Date(from).getTime() > new Date(to).getTime()) {
+      throw new InvalidAuditLogQueryError("from must be before or equal to to.");
+    }
+    const limit = validateLimit(query.limit);
+    const offset = validateOffset(query.offset);
+
+    return this.repository.listAllAuditLogs({ eventType, actorUserId, from, to, limit, offset });
   }
 }

@@ -5,6 +5,7 @@ import { AuditLogService, InvalidAuditLogQueryError, MAX_AUDIT_LOG_LIMIT } from 
 function createFakeRepository(overrides: Partial<AuditLogRepository> = {}): AuditLogRepository {
   return {
     listAuditLogs: vi.fn(),
+    listAllAuditLogs: vi.fn(),
     ...overrides,
   };
 }
@@ -165,5 +166,53 @@ describe("AuditLogService.listAuditLogs", () => {
     const service = new AuditLogService(repository);
 
     await expect(service.listAuditLogs("estate-1", { offset: "abc" })).rejects.toThrow(InvalidAuditLogQueryError);
+  });
+});
+
+describe("AuditLogService.listAllAuditLogs", () => {
+  it("passes through eventType, actorUserId, from, to, limit, and offset with no estate scoping", async () => {
+    const repository = createFakeRepository({ listAllAuditLogs: vi.fn().mockResolvedValue(makeResult()) });
+    const service = new AuditLogService(repository);
+
+    await service.listAllAuditLogs({
+      eventType: "vault_item_viewed",
+      actorUserId: "user-1",
+      from: "2026-07-01",
+      to: "2026-07-24",
+      limit: "10",
+      offset: "20",
+    });
+
+    expect(repository.listAllAuditLogs).toHaveBeenCalledWith({
+      eventType: "vault_item_viewed",
+      actorUserId: "user-1",
+      from: "2026-07-01",
+      to: "2026-07-24",
+      limit: 10,
+      offset: 20,
+    });
+  });
+
+  it("applies defaults when no filters are given", async () => {
+    const repository = createFakeRepository({ listAllAuditLogs: vi.fn().mockResolvedValue(makeResult()) });
+    const service = new AuditLogService(repository);
+
+    await service.listAllAuditLogs({});
+
+    expect(repository.listAllAuditLogs).toHaveBeenCalledWith({
+      eventType: undefined,
+      actorUserId: undefined,
+      from: undefined,
+      to: undefined,
+      limit: 50,
+      offset: 0,
+    });
+  });
+
+  it("rejects a non-string actorUserId", async () => {
+    const repository = createFakeRepository();
+    const service = new AuditLogService(repository);
+
+    await expect(service.listAllAuditLogs({ actorUserId: 123 })).rejects.toThrow(InvalidAuditLogQueryError);
   });
 });

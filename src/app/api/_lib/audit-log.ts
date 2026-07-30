@@ -17,7 +17,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export async function writeAuditLog(
   supabase: SupabaseClient,
   params: {
-    estateId: string;
+    /** Null for platform-wide events with no single estate (e.g. admin user/provider management, US-8.x) — audit_logs_insert_self already permits estate_id is null for any authenticated caller logging their own actions. */
+    estateId: string | null;
     actorUserId: string;
     eventType: string;
     targetTable?: string;

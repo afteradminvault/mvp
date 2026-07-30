@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AuditLogEntry, AuditLogListResult, AuditLogRepository, ListAuditLogsFilter } from "@/domain/audit-logs/ports";
+import type {
+  AuditLogEntry,
+  AuditLogListResult,
+  AuditLogRepository,
+  ListAllAuditLogsFilter,
+  ListAuditLogsFilter,
+} from "@/domain/audit-logs/ports";
 
 interface AuditLogRow {
   id: string;
@@ -46,6 +52,25 @@ export class SupabaseAuditLogRepository implements AuditLogRepository {
       .eq("estate_id", estateId);
 
     if (filter.eventType) query = query.eq("event_type", filter.eventType);
+    if (filter.from) query = query.gte("created_at", filter.from);
+    if (filter.to) query = query.lte("created_at", filter.to);
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(filter.offset, filter.offset + filter.limit - 1);
+    if (error) throw error;
+
+    return {
+      entries: (data as AuditLogRow[]).map(toAuditLogEntry),
+      total: count ?? 0,
+    };
+  }
+
+  async listAllAuditLogs(filter: ListAllAuditLogsFilter): Promise<AuditLogListResult> {
+    let query = this.supabase.from("audit_logs").select("*", { count: "exact" });
+
+    if (filter.eventType) query = query.eq("event_type", filter.eventType);
+    if (filter.actorUserId) query = query.eq("actor_user_id", filter.actorUserId);
     if (filter.from) query = query.gte("created_at", filter.from);
     if (filter.to) query = query.lte("created_at", filter.to);
 

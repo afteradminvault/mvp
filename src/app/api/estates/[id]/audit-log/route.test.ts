@@ -11,6 +11,7 @@ vi.mock("@/app/api/_lib/require-session", () => ({
 function createFakeRepository(overrides: Partial<AuditLogRepository> = {}): AuditLogRepository {
   return {
     listAuditLogs: vi.fn(),
+    listAllAuditLogs: vi.fn(),
     ...overrides,
   };
 }

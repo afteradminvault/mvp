@@ -33,6 +33,13 @@ const serverOnlyEnvSchema = z.object({
   // unauthenticated if it's unset, since there's nothing sensitive in the
   // placeholder job itself (revisit this default once a real job replaces it).
   CRON_SECRET: z.string().min(1).optional(),
+  // US-8.6 — verifies the inbound-parse webhook actually came from Resend's
+  // dashboard-configured endpoint. Set once inbound routing is configured
+  // there (Resend inbound domain + webhook URL); the route itself is
+  // scaffolded ahead of that setup step, matching RESEND_API_KEY's own
+  // "optional, configured later" pattern above. Optional so local dev/CI
+  // isn't blocked on a secret that has nothing to verify yet.
+  RESEND_INBOUND_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;

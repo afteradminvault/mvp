@@ -7,16 +7,27 @@ import {
   LegalRequirementForbiddenError,
   LegalRequirementNotFoundError,
 } from "@/domain/admin-legal-requirements/admin-legal-requirement-service";
+import { AdminUserNotFoundError, InvalidAdminUserInputError } from "@/domain/admin-users/admin-user-service";
+import { InvalidAdminCaseInputError } from "@/domain/admin-cases/admin-case-service";
+import { InvalidSupportTicketInputError } from "@/domain/admin-support-tickets/admin-support-ticket-service";
+import { InvalidAuditLogQueryError } from "@/domain/audit-logs/audit-log-service";
 
 export function adminErrorResponse(error: unknown): NextResponse {
   if (
     error instanceof InvalidJurisdictionInputError ||
     error instanceof InvalidProviderInputError ||
-    error instanceof InvalidLegalRequirementInputError
+    error instanceof InvalidLegalRequirementInputError ||
+    error instanceof InvalidAdminUserInputError ||
+    error instanceof InvalidAdminCaseInputError ||
+    error instanceof InvalidSupportTicketInputError ||
+    error instanceof InvalidAuditLogQueryError
   ) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-  if (error instanceof LegalRequirementNotFoundError) {
+  if (
+    error instanceof LegalRequirementNotFoundError ||
+    error instanceof AdminUserNotFoundError
+  ) {
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
   if (error instanceof LegalRequirementAlreadySupersededError) {

@@ -28,6 +28,11 @@ export interface ListAuditLogsFilter {
   offset: number;
 }
 
+/** US-8.7 — the system-wide (not per-case) admin view; adds actorUserId, the one extra filter dimension that view's AC calls for. */
+export interface ListAllAuditLogsFilter extends ListAuditLogsFilter {
+  actorUserId?: string;
+}
+
 export interface AuditLogListResult {
   entries: AuditLogEntry[];
   /** Total rows matching the filter, ignoring limit/offset — drives the pagination UI's "page N of M". */
@@ -36,4 +41,6 @@ export interface AuditLogListResult {
 
 export interface AuditLogRepository {
   listAuditLogs(estateId: string, filter: ListAuditLogsFilter): Promise<AuditLogListResult>;
+  /** US-8.7 — platform admins only (audit_logs_select_admin RLS); no estate scoping. */
+  listAllAuditLogs(filter: ListAllAuditLogsFilter): Promise<AuditLogListResult>;
 }
