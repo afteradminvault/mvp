@@ -23,11 +23,13 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [notes, setNotes] = useState("");
   const [closureMethod, setClosureMethod] = useState<ClosureMethod | "">("");
+  const [closureInstructions, setClosureInstructions] = useState("");
   const [bereavementContactEmail, setBereavementContactEmail] = useState("");
   const [bereavementContactPhone, setBereavementContactPhone] = useState("");
   const [bereavementInstructionsUrl, setBereavementInstructionsUrl] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [isCommonOnboardingPlatform, setIsCommonOnboardingPlatform] = useState(false);
+  const [supportsMemorialize, setSupportsMemorialize] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -44,11 +46,13 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
           websiteUrl: websiteUrl || undefined,
           notes: notes || undefined,
           closureMethod: closureMethod || undefined,
+          closureInstructions: closureInstructions || undefined,
           bereavementContactEmail: bereavementContactEmail || undefined,
           bereavementContactPhone: bereavementContactPhone || undefined,
           bereavementInstructionsUrl: bereavementInstructionsUrl || undefined,
           logoUrl: logoUrl || undefined,
           isCommonOnboardingPlatform,
+          supportsMemorialize,
         }),
       });
       const result = await response.json();
@@ -61,11 +65,31 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
       setWebsiteUrl("");
       setNotes("");
       setClosureMethod("");
+      setClosureInstructions("");
       setBereavementContactEmail("");
       setBereavementContactPhone("");
       setBereavementInstructionsUrl("");
       setLogoUrl("");
       setIsCommonOnboardingPlatform(false);
+      setSupportsMemorialize(false);
+    });
+  }
+
+  /** US-8.4 — retire/reactivate via is_active, never a hard delete. */
+  function handleToggleActive(provider: AdminProvider) {
+    setError(null);
+    startTransition(async () => {
+      const response = await fetch(`/api/admin/providers/${provider.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !provider.isActive }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.error ?? "Something went wrong.");
+        return;
+      }
+      setProviders((current) => current.map((p) => (p.id === provider.id ? result.provider : p)));
     });
   }
 
@@ -75,17 +99,31 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
 
       <ul className="flex flex-col gap-2 text-sm">
         {providers.map((provider) => (
-          <li key={provider.id} className="rounded border border-gray-300 p-3">
-            <p className="font-medium">
-              {provider.name} <span className="font-normal text-gray-600">&middot; {provider.defaultCategory}</span>
-              {provider.isCommonOnboardingPlatform && (
-                <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600">
-                  onboarding checklist
-                </span>
-              )}
-            </p>
+          <li key={provider.id} className={`rounded border border-gray-300 p-3 ${provider.isActive ? "" : "opacity-50"}`}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-medium">
+                {provider.name} <span className="font-normal text-gray-600">&middot; {provider.defaultCategory}</span>
+                {!provider.isActive && (
+                  <span className="ml-2 rounded bg-gray-200 px-1.5 py-0.5 text-xs font-normal text-gray-700">retired</span>
+                )}
+                {provider.isCommonOnboardingPlatform && (
+                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600">
+                    onboarding checklist
+                  </span>
+                )}
+                {provider.supportsMemorialize && (
+                  <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-normal text-gray-600">
+                    supports memorialize
+                  </span>
+                )}
+              </p>
+              <button onClick={() => handleToggleActive(provider)} disabled={isPending} className="shrink-0 text-xs underline disabled:opacity-50">
+                {provider.isActive ? "Retire" : "Reactivate"}
+              </button>
+            </div>
             {provider.websiteUrl && <p className="text-gray-600">{provider.websiteUrl}</p>}
             {provider.notes && <p className="text-gray-600">{provider.notes}</p>}
+            {provider.closureInstructions && <p className="text-gray-600">{provider.closureInstructions}</p>}
             {provider.closureMethod && (
               <p className="text-gray-600">
                 Closure via {provider.closureMethod.replace("_", " ")}
@@ -145,6 +183,13 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
             </option>
           ))}
         </select>
+        <textarea
+          value={closureInstructions}
+          onChange={(event) => setClosureInstructions(event.target.value)}
+          placeholder="Family-facing closure instructions (optional) — shown in the Account Closure Module"
+          rows={3}
+          className="rounded border border-gray-300 px-3 py-2 text-sm"
+        />
         <input
           type="email"
           value={bereavementContactEmail}
@@ -177,6 +222,14 @@ export function ProvidersAdminClient({ initialProviders }: { initialProviders: A
             onChange={(event) => setIsCommonOnboardingPlatform(event.target.checked)}
           />
           Show in the onboarding checklist (US-2.4)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={supportsMemorialize}
+            onChange={(event) => setSupportsMemorialize(event.target.checked)}
+          />
+          Supports memorializing an account, not just closing it (US-6.2)
         </label>
 
         <button

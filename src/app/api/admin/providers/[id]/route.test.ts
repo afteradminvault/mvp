@@ -32,11 +32,14 @@ function makeProvider(overrides: Partial<AdminProvider> = {}): AdminProvider {
     websiteUrl: null,
     notes: null,
     closureMethod: null,
+    closureInstructions: null,
     bereavementContactEmail: null,
     bereavementContactPhone: null,
     bereavementInstructionsUrl: null,
     logoUrl: null,
     isCommonOnboardingPlatform: false,
+    supportsMemorialize: false,
+    isActive: true,
     ...overrides,
   };
 }

@@ -3,6 +3,7 @@ import type { AdminProvider, AdminProviderRepository } from "./ports";
 import {
   AdminProviderService,
   InvalidProviderInputError,
+  MAX_CLOSURE_INSTRUCTIONS_LENGTH,
   MAX_NAME_LENGTH,
   MAX_NOTES_LENGTH,
   ProviderForbiddenError,
@@ -25,11 +26,14 @@ function makeProvider(overrides: Partial<AdminProvider> = {}): AdminProvider {
     websiteUrl: null,
     notes: null,
     closureMethod: null,
+    closureInstructions: null,
     bereavementContactEmail: null,
     bereavementContactPhone: null,
     bereavementInstructionsUrl: null,
     logoUrl: null,
     isCommonOnboardingPlatform: false,
+    supportsMemorialize: false,
+    isActive: true,
     ...overrides,
   };
 }
@@ -48,11 +52,14 @@ describe("AdminProviderService.createProvider", () => {
       websiteUrl: null,
       notes: null,
       closureMethod: null,
+      closureInstructions: null,
       bereavementContactEmail: null,
       bereavementContactPhone: null,
       bereavementInstructionsUrl: null,
       logoUrl: null,
       isCommonOnboardingPlatform: false,
+      supportsMemorialize: false,
+      isActive: true,
     });
     expect(result).toBe(provider);
   });
@@ -111,6 +118,35 @@ describe("AdminProviderService.createProvider", () => {
 
     await expect(
       service.createProvider({ name: "Chase", defaultCategory: "financial", notes: "x".repeat(MAX_NOTES_LENGTH + 1) }),
+    ).rejects.toThrow(InvalidProviderInputError);
+  });
+
+  it("accepts a valid closureInstructions", async () => {
+    const provider = makeProvider({ closureInstructions: "Call the bereavement line and provide a death certificate." });
+    const repository = createFakeRepository({ createProvider: vi.fn().mockResolvedValue(provider) });
+    const service = new AdminProviderService(repository);
+
+    await service.createProvider({
+      name: "Chase",
+      defaultCategory: "financial",
+      closureInstructions: "Call the bereavement line and provide a death certificate.",
+    });
+
+    expect(repository.createProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ closureInstructions: "Call the bereavement line and provide a death certificate." }),
+    );
+  });
+
+  it(`rejects closureInstructions longer than ${MAX_CLOSURE_INSTRUCTIONS_LENGTH} characters`, async () => {
+    const repository = createFakeRepository();
+    const service = new AdminProviderService(repository);
+
+    await expect(
+      service.createProvider({
+        name: "Chase",
+        defaultCategory: "financial",
+        closureInstructions: "x".repeat(MAX_CLOSURE_INSTRUCTIONS_LENGTH + 1),
+      }),
     ).rejects.toThrow(InvalidProviderInputError);
   });
 

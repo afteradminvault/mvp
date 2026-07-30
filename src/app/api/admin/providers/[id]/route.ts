@@ -23,11 +23,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     websiteUrl,
     notes,
     closureMethod,
+    closureInstructions,
     bereavementContactEmail,
     bereavementContactPhone,
     bereavementInstructionsUrl,
     logoUrl,
     isCommonOnboardingPlatform,
+    supportsMemorialize,
+    isActive,
   } = body as Record<string, unknown>;
   if (name !== undefined && typeof name !== "string") {
     return NextResponse.json({ error: "name must be a string if provided." }, { status: 400 });
@@ -43,6 +46,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
   if (closureMethod !== undefined && closureMethod !== null && typeof closureMethod !== "string") {
     return NextResponse.json({ error: "closureMethod must be a string if provided." }, { status: 400 });
+  }
+  if (closureInstructions !== undefined && closureInstructions !== null && typeof closureInstructions !== "string") {
+    return NextResponse.json({ error: "closureInstructions must be a string if provided." }, { status: 400 });
   }
   if (
     bereavementContactEmail !== undefined &&
@@ -71,6 +77,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (isCommonOnboardingPlatform !== undefined && typeof isCommonOnboardingPlatform !== "boolean") {
     return NextResponse.json({ error: "isCommonOnboardingPlatform must be a boolean if provided." }, { status: 400 });
   }
+  if (supportsMemorialize !== undefined && typeof supportsMemorialize !== "boolean") {
+    return NextResponse.json({ error: "supportsMemorialize must be a boolean if provided." }, { status: 400 });
+  }
+  if (isActive !== undefined && typeof isActive !== "boolean") {
+    return NextResponse.json({ error: "isActive must be a boolean if provided." }, { status: 400 });
+  }
 
   const service = new AdminProviderService(new SupabaseAdminProviderRepository(session.supabase));
   try {
@@ -80,11 +92,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       websiteUrl: websiteUrl as string | null | undefined,
       notes: notes as string | null | undefined,
       closureMethod: closureMethod as never,
+      closureInstructions: closureInstructions as string | null | undefined,
       bereavementContactEmail: bereavementContactEmail as string | null | undefined,
       bereavementContactPhone: bereavementContactPhone as string | null | undefined,
       bereavementInstructionsUrl: bereavementInstructionsUrl as string | null | undefined,
       logoUrl: logoUrl as string | null | undefined,
       isCommonOnboardingPlatform: isCommonOnboardingPlatform as boolean | undefined,
+      supportsMemorialize: supportsMemorialize as boolean | undefined,
+      isActive: isActive as boolean | undefined,
     });
     return NextResponse.json({ provider });
   } catch (error) {

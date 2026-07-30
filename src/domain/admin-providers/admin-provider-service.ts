@@ -10,6 +10,7 @@ import type {
 
 export const MAX_NAME_LENGTH = 200;
 export const MAX_NOTES_LENGTH = 2000;
+export const MAX_CLOSURE_INSTRUCTIONS_LENGTH = 4000;
 export const CLOSURE_METHODS: readonly ClosureMethod[] = ["online_form", "email", "phone", "automatic"];
 
 export class InvalidProviderInputError extends Error {}
@@ -96,6 +97,17 @@ function validateNotes(notes: unknown): string | null {
   return notes;
 }
 
+function validateClosureInstructions(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new InvalidProviderInputError("closureInstructions must be a string.");
+  }
+  if (value.length > MAX_CLOSURE_INSTRUCTIONS_LENGTH) {
+    throw new InvalidProviderInputError(`closureInstructions must be ${MAX_CLOSURE_INSTRUCTIONS_LENGTH} characters or fewer.`);
+  }
+  return value;
+}
+
 function translateRepositoryError(error: unknown): never {
   // Real Postgres RLS WITH CHECK violation text (providers_admin_write) —
   // defense-in-depth fallback; requirePlatformAdmin() at the route layer
@@ -120,6 +132,7 @@ export class AdminProviderService {
     const websiteUrl = validateWebsiteUrl(input.websiteUrl);
     const notes = validateNotes(input.notes);
     const closureMethod = validateClosureMethod(input.closureMethod);
+    const closureInstructions = validateClosureInstructions(input.closureInstructions);
     const bereavementContactEmail = validateOptionalEmail(input.bereavementContactEmail);
     const bereavementContactPhone = validateOptionalPhone(input.bereavementContactPhone);
     const bereavementInstructionsUrl = validateOptionalUrl(
@@ -128,6 +141,8 @@ export class AdminProviderService {
     );
     const logoUrl = validateOptionalUrl(input.logoUrl, "logoUrl");
     const isCommonOnboardingPlatform = input.isCommonOnboardingPlatform ?? false;
+    const supportsMemorialize = input.supportsMemorialize ?? false;
+    const isActive = input.isActive ?? true;
 
     try {
       return await this.repository.createProvider({
@@ -136,11 +151,14 @@ export class AdminProviderService {
         websiteUrl,
         notes,
         closureMethod,
+        closureInstructions,
         bereavementContactEmail,
         bereavementContactPhone,
         bereavementInstructionsUrl,
         logoUrl,
         isCommonOnboardingPlatform,
+        supportsMemorialize,
+        isActive,
       });
     } catch (error) {
       translateRepositoryError(error);
@@ -162,6 +180,8 @@ export class AdminProviderService {
     if (input.websiteUrl !== undefined) patch.websiteUrl = validateWebsiteUrl(input.websiteUrl);
     if (input.notes !== undefined) patch.notes = validateNotes(input.notes);
     if (input.closureMethod !== undefined) patch.closureMethod = validateClosureMethod(input.closureMethod);
+    if (input.closureInstructions !== undefined)
+      patch.closureInstructions = validateClosureInstructions(input.closureInstructions);
     if (input.bereavementContactEmail !== undefined)
       patch.bereavementContactEmail = validateOptionalEmail(input.bereavementContactEmail);
     if (input.bereavementContactPhone !== undefined)
@@ -174,6 +194,8 @@ export class AdminProviderService {
     if (input.logoUrl !== undefined) patch.logoUrl = validateOptionalUrl(input.logoUrl, "logoUrl");
     if (input.isCommonOnboardingPlatform !== undefined)
       patch.isCommonOnboardingPlatform = input.isCommonOnboardingPlatform;
+    if (input.supportsMemorialize !== undefined) patch.supportsMemorialize = input.supportsMemorialize;
+    if (input.isActive !== undefined) patch.isActive = input.isActive;
     if (Object.keys(patch).length === 0) {
       throw new InvalidProviderInputError("No valid fields to update.");
     }

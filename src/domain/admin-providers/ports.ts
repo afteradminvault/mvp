@@ -17,11 +17,17 @@ export interface AdminProvider {
   websiteUrl: string | null;
   notes: string | null;
   closureMethod: ClosureMethod | null;
+  /** Family-facing step-by-step closure instructions (US-5.2) — distinct from `notes`, which is staff-internal only. */
+  closureInstructions: string | null;
   bereavementContactEmail: string | null;
   bereavementContactPhone: string | null;
   bereavementInstructionsUrl: string | null;
   logoUrl: string | null;
   isCommonOnboardingPlatform: boolean;
+  /** US-6.2 — whether "memorialize" is a valid letter_type choice for this platform. */
+  supportsMemorialize: boolean;
+  /** US-8.4 — retiring a platform sets this false rather than a hard delete, preserving legal_requirements/asset history that references it. */
+  isActive: boolean;
 }
 
 export interface CreateProviderInput {
@@ -30,11 +36,14 @@ export interface CreateProviderInput {
   websiteUrl?: string | null;
   notes?: string | null;
   closureMethod?: ClosureMethod | null;
+  closureInstructions?: string | null;
   bereavementContactEmail?: string | null;
   bereavementContactPhone?: string | null;
   bereavementInstructionsUrl?: string | null;
   logoUrl?: string | null;
   isCommonOnboardingPlatform?: boolean;
+  supportsMemorialize?: boolean;
+  isActive?: boolean;
 }
 
 export interface UpdateProviderInput {
@@ -43,11 +52,14 @@ export interface UpdateProviderInput {
   websiteUrl?: string | null;
   notes?: string | null;
   closureMethod?: ClosureMethod | null;
+  closureInstructions?: string | null;
   bereavementContactEmail?: string | null;
   bereavementContactPhone?: string | null;
   bereavementInstructionsUrl?: string | null;
   logoUrl?: string | null;
   isCommonOnboardingPlatform?: boolean;
+  supportsMemorialize?: boolean;
+  isActive?: boolean;
 }
 
 export interface AdminProviderRepository {
