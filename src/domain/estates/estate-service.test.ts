@@ -49,6 +49,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     deceasedDateOfDeath: null,
     draftStep: null,
     draftPayload: {},
+    isSelfPlanned: false,
     ...overrides,
   };
 }
@@ -275,6 +276,7 @@ describe("EstateService.createDraftCase", () => {
       deceasedRelationship: "mother",
       deceasedDateOfDeath: null,
       checkInIntervalDays: undefined,
+      isSelfPlanned: false,
     });
     expect(result).toBe(estate);
   });
@@ -289,6 +291,16 @@ describe("EstateService.createDraftCase", () => {
     expect(repository.createDraftCase).toHaveBeenCalledWith(
       expect.objectContaining({ deceasedDateOfDeath: "2026-07-01" }),
     );
+  });
+
+  it("passes through isSelfPlanned when provided (Will Builder epic)", async () => {
+    const estate = makeEstate({ status: "draft", isSelfPlanned: true });
+    const repository = createFakeRepository({ createDraftCase: vi.fn().mockResolvedValue(estate) });
+    const service = new EstateService(repository);
+
+    await service.createDraftCase({ ...validInput, isSelfPlanned: true });
+
+    expect(repository.createDraftCase).toHaveBeenCalledWith(expect.objectContaining({ isSelfPlanned: true }));
   });
 
   it("rejects a missing jurisdiction", async () => {

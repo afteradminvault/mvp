@@ -199,6 +199,7 @@ export class EstateService {
       deceasedRelationship,
       deceasedDateOfDeath,
       checkInIntervalDays,
+      isSelfPlanned: input.isSelfPlanned ?? false,
     });
   }
 

@@ -45,6 +45,8 @@ export interface Estate {
   /** Onboarding progress (Database Schema v2 §2.3) — null step means onboarding hasn't started or has completed. */
   draftStep: string | null;
   draftPayload: Record<string, unknown>;
+  /** Will Builder epic — true only when the account holder IS the person the case is about (the testator), never inferred from deceasedRelationship. Gates whether a will can be created for this case. */
+  isSelfPlanned: boolean;
 }
 
 export interface Jurisdiction {
@@ -75,6 +77,8 @@ export interface CreateDraftCaseInput {
   /** Blank = pre-death/planning-ahead (PRD v2 §0); filled in = post-death. */
   deceasedDateOfDeath?: string | null;
   checkInIntervalDays?: number;
+  /** Will Builder epic — set only by the dedicated /wills/new entry point. */
+  isSelfPlanned?: boolean;
 }
 
 export interface SaveDraftProgressInput {

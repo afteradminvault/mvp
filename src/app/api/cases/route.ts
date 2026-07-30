@@ -22,8 +22,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { jurisdictionId, deceasedFullName, deceasedDateOfBirth, deceasedRelationship, deceasedDateOfDeath } =
-    body as Record<string, unknown>;
+  const {
+    jurisdictionId,
+    deceasedFullName,
+    deceasedDateOfBirth,
+    deceasedRelationship,
+    deceasedDateOfDeath,
+    isSelfPlanned,
+  } = body as Record<string, unknown>;
 
   if (typeof jurisdictionId !== "string") {
     return NextResponse.json({ error: "jurisdictionId is a required string." }, { status: 400 });
@@ -44,6 +50,9 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json({ error: "deceasedDateOfDeath must be a string if provided." }, { status: 400 });
   }
+  if (isSelfPlanned !== undefined && typeof isSelfPlanned !== "boolean") {
+    return NextResponse.json({ error: "isSelfPlanned must be a boolean if provided." }, { status: 400 });
+  }
 
   const service = new EstateService(new SupabaseEstateRepository(session.supabase));
   try {
@@ -53,6 +62,7 @@ export async function POST(request: Request) {
       deceasedDateOfBirth,
       deceasedRelationship,
       deceasedDateOfDeath: deceasedDateOfDeath as string | null | undefined,
+      isSelfPlanned: isSelfPlanned as boolean | undefined,
     });
     return NextResponse.json({ case: estate }, { status: 201 });
   } catch (error) {

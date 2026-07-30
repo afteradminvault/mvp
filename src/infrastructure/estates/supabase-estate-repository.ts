@@ -30,6 +30,7 @@ export interface EstateRow {
   deceased_date_of_death: string | null;
   draft_step: string | null;
   draft_payload: Record<string, unknown>;
+  is_self_planned: boolean;
 }
 
 interface JurisdictionRow {
@@ -60,6 +61,7 @@ export function toEstate(row: EstateRow): Estate {
     deceasedDateOfDeath: row.deceased_date_of_death,
     draftStep: row.draft_step,
     draftPayload: row.draft_payload,
+    isSelfPlanned: row.is_self_planned,
   };
 }
 
@@ -168,6 +170,7 @@ export class SupabaseEstateRepository implements EstateRepository {
       ...(input.checkInIntervalDays !== undefined
         ? { p_check_in_interval_days: input.checkInIntervalDays }
         : {}),
+      p_is_self_planned: input.isSelfPlanned ?? false,
     });
     if (error) throw error;
     return toEstate(data as EstateRow);

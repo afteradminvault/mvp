@@ -32,6 +32,9 @@ export default async function EstatesPage() {
           <Link href="/cases/new" className="text-sm underline">
             + New Case
           </Link>
+          <Link href="/wills/new" className="text-sm underline">
+            + Start a Will
+          </Link>
           <Link href="/account/mfa" className="text-sm underline">
             Two-factor auth
           </Link>

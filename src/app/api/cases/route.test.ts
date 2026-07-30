@@ -51,6 +51,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     deceasedDateOfDeath: null,
     draftStep: null,
     draftPayload: {},
+    isSelfPlanned: false,
     ...overrides,
   };
 }
@@ -129,6 +130,7 @@ describe("POST /api/cases", () => {
       deceasedRelationship: "mother",
       deceasedDateOfDeath: null,
       checkInIntervalDays: undefined,
+      isSelfPlanned: false,
     });
   });
 
@@ -142,5 +144,21 @@ describe("POST /api/cases", () => {
     expect(fakeRepository.createDraftCase).toHaveBeenCalledWith(
       expect.objectContaining({ deceasedDateOfDeath: "2026-07-01" }),
     );
+  });
+
+  it("passes through isSelfPlanned=true (Will Builder /wills/new entry point)", async () => {
+    const created = makeEstate({ isSelfPlanned: true });
+    fakeRepository.createDraftCase = vi.fn().mockResolvedValue(created);
+
+    const response = await POST(postRequest({ ...validBody, isSelfPlanned: true }));
+
+    expect(response.status).toBe(201);
+    expect(fakeRepository.createDraftCase).toHaveBeenCalledWith(expect.objectContaining({ isSelfPlanned: true }));
+  });
+
+  it("returns 400 when isSelfPlanned is provided but not a boolean", async () => {
+    const response = await POST(postRequest({ ...validBody, isSelfPlanned: "yes" }));
+    expect(response.status).toBe(400);
+    expect(fakeRepository.createDraftCase).not.toHaveBeenCalled();
   });
 });

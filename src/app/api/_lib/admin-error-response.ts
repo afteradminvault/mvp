@@ -11,6 +11,12 @@ import { AdminUserNotFoundError, InvalidAdminUserInputError } from "@/domain/adm
 import { InvalidAdminCaseInputError } from "@/domain/admin-cases/admin-case-service";
 import { InvalidSupportTicketInputError } from "@/domain/admin-support-tickets/admin-support-ticket-service";
 import { InvalidAuditLogQueryError } from "@/domain/audit-logs/audit-log-service";
+import {
+  InvalidWillExecutionRequirementInputError,
+  WillExecutionRequirementAlreadySupersededError,
+  WillExecutionRequirementForbiddenError,
+  WillExecutionRequirementNotFoundError,
+} from "@/domain/admin-will-execution-requirements/admin-will-execution-requirement-service";
 
 export function adminErrorResponse(error: unknown): NextResponse {
   if (
@@ -20,23 +26,29 @@ export function adminErrorResponse(error: unknown): NextResponse {
     error instanceof InvalidAdminUserInputError ||
     error instanceof InvalidAdminCaseInputError ||
     error instanceof InvalidSupportTicketInputError ||
-    error instanceof InvalidAuditLogQueryError
+    error instanceof InvalidAuditLogQueryError ||
+    error instanceof InvalidWillExecutionRequirementInputError
   ) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   if (
     error instanceof LegalRequirementNotFoundError ||
-    error instanceof AdminUserNotFoundError
+    error instanceof AdminUserNotFoundError ||
+    error instanceof WillExecutionRequirementNotFoundError
   ) {
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
-  if (error instanceof LegalRequirementAlreadySupersededError) {
+  if (
+    error instanceof LegalRequirementAlreadySupersededError ||
+    error instanceof WillExecutionRequirementAlreadySupersededError
+  ) {
     return NextResponse.json({ error: error.message }, { status: 409 });
   }
   if (
     error instanceof JurisdictionForbiddenError ||
     error instanceof ProviderForbiddenError ||
-    error instanceof LegalRequirementForbiddenError
+    error instanceof LegalRequirementForbiddenError ||
+    error instanceof WillExecutionRequirementForbiddenError
   ) {
     return NextResponse.json({ error: error.message }, { status: 403 });
   }

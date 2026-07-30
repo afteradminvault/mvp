@@ -167,6 +167,35 @@ export default async function EstateDetailPage({
         </div>
       </div>
 
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Platform directory</h2>
+          <Link href={`/estates/${id}/platforms`} className="text-sm underline">
+            Browse &rarr;
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Notification letters</h2>
+          <Link href={`/estates/${id}/notification-letters`} className="text-sm underline">
+            View &rarr;
+          </Link>
+        </div>
+      </div>
+
+      {estate.isSelfPlanned && isOwner && (
+        <div className="mt-6 rounded border border-gray-300 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Your Will</h2>
+            <Link href={`/estates/${id}/will`} className="text-sm underline">
+              Manage &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
+
       {(isOwner || isExecutor) && (
         <div className="mt-6 rounded border border-gray-300 p-4">
           <div className="flex items-center justify-between">
@@ -177,6 +206,15 @@ export default async function EstateDetailPage({
           </div>
         </div>
       )}
+
+      <div className="mt-6 rounded border border-gray-300 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Vault preview letter</h2>
+          <Link href={`/estates/${id}/vault-preview-letter`} className="text-sm underline">
+            Generate &rarr;
+          </Link>
+        </div>
+      </div>
 
       <div className="mt-6 rounded border border-gray-300 p-4">
         <div className="mb-3 flex items-center justify-between">

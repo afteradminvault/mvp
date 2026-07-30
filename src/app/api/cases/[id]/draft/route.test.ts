@@ -51,6 +51,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     deceasedDateOfDeath: null,
     draftStep: "checklist",
     draftPayload: {},
+    isSelfPlanned: false,
     ...overrides,
   };
 }
