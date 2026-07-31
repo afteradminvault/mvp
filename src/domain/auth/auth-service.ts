@@ -24,7 +24,12 @@ function isValidEmail(email: string): boolean {
 export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
 
-  async signUp(params: { email: string; password: string; displayName: string }): Promise<AuthUser> {
+  async signUp(params: {
+    email: string;
+    password: string;
+    displayName: string;
+    acquisitionBrand: string;
+  }): Promise<AuthUser> {
     const email = params.email.trim();
     const displayName = params.displayName.trim();
 
@@ -40,7 +45,12 @@ export class AuthService {
       );
     }
 
-    return this.repository.signUp({ email, password: params.password, displayName });
+    return this.repository.signUp({
+      email,
+      password: params.password,
+      displayName,
+      acquisitionBrand: params.acquisitionBrand,
+    });
   }
 
   async signIn(params: { email: string; password: string }): Promise<AuthSession> {

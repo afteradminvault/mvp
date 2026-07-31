@@ -31,6 +31,7 @@ export interface EstateRow {
   draft_step: string | null;
   draft_payload: Record<string, unknown>;
   is_self_planned: boolean;
+  acquisition_brand: string;
 }
 
 interface JurisdictionRow {
@@ -62,6 +63,7 @@ export function toEstate(row: EstateRow): Estate {
     draftStep: row.draft_step,
     draftPayload: row.draft_payload,
     isSelfPlanned: row.is_self_planned,
+    acquisitionBrand: row.acquisition_brand,
   };
 }
 
@@ -171,6 +173,7 @@ export class SupabaseEstateRepository implements EstateRepository {
         ? { p_check_in_interval_days: input.checkInIntervalDays }
         : {}),
       p_is_self_planned: input.isSelfPlanned ?? false,
+      p_acquisition_brand: input.acquisitionBrand ?? "unknown",
     });
     if (error) throw error;
     return toEstate(data as EstateRow);

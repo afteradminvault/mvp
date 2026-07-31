@@ -8,10 +8,28 @@
   --color-cream-dark: #f0e6d3;
   --color-ink: #241f1b;
   --color-ink-soft: #58504a;
-  --color-ember: #bb6b34;
-  --color-ember-dark: #98552a;
-  --color-sage: #6d7b5f;
-  --color-sage-dark: #53604a;
+
+  /*
+   * Two-Brand Foundation (UI Recommendation Addendum §11.3): the palette
+   * itself does not change per brand — accentHue only picks which of these
+   * two already-defined tones is active, via --color-accent below. No
+   * component should reference --color-teal/--color-indigo directly;
+   * always go through --color-accent/--color-accent-dark so the same
+   * component renders correctly under either brand.
+   */
+  --color-teal: #1b6f5c;
+  --color-teal-dark: #14584a;
+  --color-indigo: #4640c7;
+  --color-indigo-dark: #3733a0;
+
+  /* Default: aftervault (this app's brand before the two-brand split, and DEFAULT_BRAND_ID). */
+  --color-accent: var(--color-indigo);
+  --color-accent-dark: var(--color-indigo-dark);
+}
+
+[data-brand="afteradmin"] {
+  --color-accent: var(--color-teal);
+  --color-accent-dark: var(--color-teal-dark);
 }
 
 body {

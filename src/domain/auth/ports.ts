@@ -28,7 +28,13 @@ export interface MfaFactor {
 }
 
 export interface AuthRepository {
-  signUp(params: { email: string; password: string; displayName: string }): Promise<AuthUser>;
+  /** acquisitionBrand: Two-Brand Foundation (Schema Addendum §2.2) — attribution only, resolved server-side, never trusted from client input. */
+  signUp(params: {
+    email: string;
+    password: string;
+    displayName: string;
+    acquisitionBrand: string;
+  }): Promise<AuthUser>;
   signIn(params: { email: string; password: string }): Promise<AuthSession>;
   signOut(): Promise<void>;
   getSession(): Promise<AuthSession | null>;

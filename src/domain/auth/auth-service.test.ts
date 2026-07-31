@@ -35,14 +35,32 @@ describe("AuthService.signUp", () => {
       email: "  diane@example.com  ",
       password: validPassword,
       displayName: "  Diane  ",
+      acquisitionBrand: "aftervault",
     });
 
     expect(repository.signUp).toHaveBeenCalledWith({
       email: "diane@example.com",
       password: validPassword,
       displayName: "Diane",
+      acquisitionBrand: "aftervault",
     });
     expect(result).toBe(user);
+  });
+
+  it("passes acquisitionBrand through unchanged", async () => {
+    const repository = createFakeRepository({ signUp: vi.fn().mockResolvedValue(user) });
+    const service = new AuthService(repository);
+
+    await service.signUp({
+      email: "diane@example.com",
+      password: validPassword,
+      displayName: "Diane",
+      acquisitionBrand: "afteradmin",
+    });
+
+    expect(repository.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({ acquisitionBrand: "afteradmin" }),
+    );
   });
 
   it("rejects an invalid email without calling the repository", async () => {
@@ -50,7 +68,12 @@ describe("AuthService.signUp", () => {
     const service = new AuthService(repository);
 
     await expect(
-      service.signUp({ email: "not-an-email", password: validPassword, displayName: "Diane" }),
+      service.signUp({
+        email: "not-an-email",
+        password: validPassword,
+        displayName: "Diane",
+        acquisitionBrand: "aftervault",
+      }),
     ).rejects.toThrow(InvalidSignUpInputError);
     expect(repository.signUp).not.toHaveBeenCalled();
   });
@@ -60,7 +83,12 @@ describe("AuthService.signUp", () => {
     const service = new AuthService(repository);
 
     await expect(
-      service.signUp({ email: "diane@example.com", password: validPassword, displayName: "   " }),
+      service.signUp({
+        email: "diane@example.com",
+        password: validPassword,
+        displayName: "   ",
+        acquisitionBrand: "aftervault",
+      }),
     ).rejects.toThrow(InvalidSignUpInputError);
   });
 
@@ -69,7 +97,12 @@ describe("AuthService.signUp", () => {
     const service = new AuthService(repository);
 
     await expect(
-      service.signUp({ email: "diane@example.com", password: "short", displayName: "Diane" }),
+      service.signUp({
+        email: "diane@example.com",
+        password: "short",
+        displayName: "Diane",
+        acquisitionBrand: "aftervault",
+      }),
     ).rejects.toThrow(new RegExp(`${MIN_PASSWORD_LENGTH} characters`));
   });
 
@@ -79,7 +112,12 @@ describe("AuthService.signUp", () => {
     const boundaryPassword = "x".repeat(MIN_PASSWORD_LENGTH);
 
     await expect(
-      service.signUp({ email: "diane@example.com", password: boundaryPassword, displayName: "Diane" }),
+      service.signUp({
+        email: "diane@example.com",
+        password: boundaryPassword,
+        displayName: "Diane",
+        acquisitionBrand: "aftervault",
+      }),
     ).resolves.toBe(user);
   });
 });

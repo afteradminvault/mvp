@@ -47,6 +47,8 @@ export interface Estate {
   draftPayload: Record<string, unknown>;
   /** Will Builder epic — true only when the account holder IS the person the case is about (the testator), never inferred from deceasedRelationship. Gates whether a will can be created for this case. */
   isSelfPlanned: boolean;
+  /** Two-Brand Foundation (Schema Addendum §2.3) — attribution only, never an access-control input. Powers future "cases by brand" admin reporting. */
+  acquisitionBrand: string;
 }
 
 export interface Jurisdiction {
@@ -79,6 +81,8 @@ export interface CreateDraftCaseInput {
   checkInIntervalDays?: number;
   /** Will Builder epic — set only by the dedicated /wills/new entry point. */
   isSelfPlanned?: boolean;
+  /** Two-Brand Foundation (Schema Addendum §2.3) — resolved server-side from the request, never client-supplied. Independent of the creating user's own acquisition_brand. */
+  acquisitionBrand?: string;
 }
 
 export interface SaveDraftProgressInput {

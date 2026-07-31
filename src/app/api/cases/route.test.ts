@@ -8,6 +8,10 @@ vi.mock("@/app/api/_lib/require-session", () => ({
   requireSession: () => requireSessionMock(),
 }));
 
+vi.mock("@/config/get-brand-config", () => ({
+  getBrandConfig: vi.fn().mockResolvedValue({ brandId: "aftervault" }),
+}));
+
 function createFakeRepository(overrides: Partial<EstateRepository> = {}): EstateRepository {
   return {
     createEstate: vi.fn(),
@@ -52,6 +56,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     draftStep: null,
     draftPayload: {},
     isSelfPlanned: false,
+    acquisitionBrand: "unknown",
     ...overrides,
   };
 }
@@ -131,6 +136,7 @@ describe("POST /api/cases", () => {
       deceasedDateOfDeath: null,
       checkInIntervalDays: undefined,
       isSelfPlanned: false,
+      acquisitionBrand: "aftervault",
     });
   });
 

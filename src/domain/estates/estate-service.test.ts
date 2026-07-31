@@ -50,6 +50,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     draftStep: null,
     draftPayload: {},
     isSelfPlanned: false,
+    acquisitionBrand: "unknown",
     ...overrides,
   };
 }
@@ -277,6 +278,7 @@ describe("EstateService.createDraftCase", () => {
       deceasedDateOfDeath: null,
       checkInIntervalDays: undefined,
       isSelfPlanned: false,
+    acquisitionBrand: "unknown",
     });
     expect(result).toBe(estate);
   });

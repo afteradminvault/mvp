@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
-import { MarketingLandingPage } from "./marketing-landing";
+import { getBrandConfig } from "@/config/get-brand-config";
+import { AfterVaultLandingPage } from "./aftervault-landing";
+import { AfterAdminLandingPage } from "./afteradmin-landing";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
@@ -10,5 +12,7 @@ export default async function Home() {
   if (user) {
     redirect("/estates");
   }
-  return <MarketingLandingPage />;
+
+  const brand = await getBrandConfig();
+  return brand.brandId === "afteradmin" ? <AfterAdminLandingPage /> : <AfterVaultLandingPage />;
 }

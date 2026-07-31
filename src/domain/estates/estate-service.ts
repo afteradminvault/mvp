@@ -200,6 +200,7 @@ export class EstateService {
       deceasedDateOfDeath,
       checkInIntervalDays,
       isSelfPlanned: input.isSelfPlanned ?? false,
+      acquisitionBrand: input.acquisitionBrand ?? "unknown",
     });
   }
 

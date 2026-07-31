@@ -52,6 +52,7 @@ function makeEstate(overrides: Partial<Estate> = {}): Estate {
     draftStep: "checklist",
     draftPayload: {},
     isSelfPlanned: false,
+    acquisitionBrand: "unknown",
     ...overrides,
   };
 }

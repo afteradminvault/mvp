@@ -18,12 +18,17 @@ import { clientEnv } from "@/config/env";
 export class SupabaseAuthRepository implements AuthRepository {
   constructor(private readonly supabase: SupabaseClient) {}
 
-  async signUp(params: { email: string; password: string; displayName: string }): Promise<AuthUser> {
+  async signUp(params: {
+    email: string;
+    password: string;
+    displayName: string;
+    acquisitionBrand: string;
+  }): Promise<AuthUser> {
     const { data, error } = await this.supabase.auth.signUp({
       email: params.email,
       password: params.password,
       options: {
-        data: { display_name: params.displayName },
+        data: { display_name: params.displayName, acquisition_brand: params.acquisitionBrand },
         // Explicit, not left to Supabase's dashboard-configured Site URL
         // default — that setting is one value for the whole project, so it
         // silently points at whatever was last configured (e.g. localhost

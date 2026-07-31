@@ -4,6 +4,7 @@ import { AuthService } from "@/domain/auth/auth-service";
 import type { MfaFactor, TotpEnrollment } from "@/domain/auth/ports";
 import { SupabaseAuthRepository } from "@/infrastructure/auth/supabase-auth-repository";
 import { createSupabaseServerClient } from "@/infrastructure/supabase/server-client";
+import { getBrandConfig } from "@/config/get-brand-config";
 
 /**
  * Thin Server Actions: parse input, delegate to AuthService, translate the
@@ -33,9 +34,13 @@ export async function signUpAction(params: {
   password: string;
   displayName: string;
 }): Promise<ActionResult<{ userId: string }>> {
+  // Brand is resolved server-side from the request proxy.ts already
+  // stamped a header onto — never accepted as client input, since it's
+  // attribution data the caller has no legitimate reason to override.
+  const brand = await getBrandConfig();
   return toActionResult(
     getAuthService()
-      .then((service) => service.signUp(params))
+      .then((service) => service.signUp({ ...params, acquisitionBrand: brand.brandId }))
       .then((user) => ({ userId: user.id })),
   );
 }

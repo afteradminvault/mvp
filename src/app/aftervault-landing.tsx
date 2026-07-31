@@ -121,7 +121,8 @@ const steps = [
   },
 ];
 
-export function MarketingLandingPage() {
+/** AfterVault.co — proactive digital estate planning register (Two-Brand Foundation). */
+export function AfterVaultLandingPage() {
   return (
     <div className="bg-cream text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
@@ -143,7 +144,7 @@ export function MarketingLandingPage() {
           </a>
           <a
             href="/signup"
-            className="rounded-full bg-ember px-4 py-2 text-sm font-medium text-white transition hover:bg-ember-dark"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-dark"
           >
             Get started
           </a>
@@ -153,15 +154,15 @@ export function MarketingLandingPage() {
       <section className="relative overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-ember/20 blur-3xl"
+          className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute top-40 -left-32 h-80 w-80 rounded-full bg-sage/20 blur-3xl"
+          className="pointer-events-none absolute top-40 -left-32 h-80 w-80 rounded-full bg-accent/10 blur-3xl"
         />
         <div className="relative mx-auto grid max-w-6xl gap-12 px-6 py-16 sm:py-24 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
-            <p className="mb-4 text-sm font-medium tracking-wide text-sage-dark uppercase">
+            <p className="mb-4 text-sm font-medium tracking-wide text-accent uppercase">
               Digital estate planning, done gently
             </p>
             <h1 className="font-display text-4xl leading-tight font-medium text-balance sm:text-5xl">
@@ -174,7 +175,7 @@ export function MarketingLandingPage() {
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <a
                 href="/signup"
-                className="rounded-full bg-ember px-6 py-3 text-sm font-medium text-white transition hover:bg-ember-dark"
+                className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white transition hover:bg-accent-dark"
               >
                 Start your vault
               </a>
@@ -201,7 +202,7 @@ export function MarketingLandingPage() {
                   key={item}
                   className="flex items-center gap-3 rounded-xl border border-ink/10 bg-cream px-4 py-3"
                 >
-                  <span className="text-sage-dark">
+                  <span className="text-accent">
                     <IconLock />
                   </span>
                   {item}
@@ -246,7 +247,7 @@ export function MarketingLandingPage() {
             const Icon = feature.icon;
             return (
               <div key={feature.title} className="rounded-2xl border border-ink/10 bg-white/60 p-6">
-                <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-ember/10 text-ember-dark">
+                <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-accent/10 text-accent-dark">
                   <Icon />
                 </span>
                 <h3 className="font-medium">{feature.title}</h3>
@@ -262,7 +263,7 @@ export function MarketingLandingPage() {
           <h2 className="font-display text-2xl font-medium sm:text-3xl">Built for the after, not just the before.</h2>
           <div className="mt-8 flex flex-col gap-6">
             <div>
-              <h3 className="font-medium text-sage-dark">Zero-knowledge, by design</h3>
+              <h3 className="font-medium text-accent-dark">Zero-knowledge, by design</h3>
               <p className="mt-2 text-ink-soft">
                 Your vault is encrypted before it ever leaves your device. AfterVault itself can&apos;t
                 read what&apos;s inside. Only the people you explicitly name — and only once your case is
@@ -270,7 +271,7 @@ export function MarketingLandingPage() {
               </p>
             </div>
             <div id="will-builder">
-              <h3 className="font-medium text-sage-dark">An honest Will Builder</h3>
+              <h3 className="font-medium text-accent-dark">An honest Will Builder</h3>
               <p className="mt-2 text-ink-soft">
                 A will you draft here becomes valid once it&apos;s signed the way your jurisdiction
                 requires — witnesses, notarization, or both. We show you exactly what that involves,
@@ -287,7 +288,7 @@ export function MarketingLandingPage() {
         <ol className="mt-10 grid gap-8 sm:grid-cols-2">
           {steps.map((step, index) => (
             <li key={step.title} className="flex gap-4">
-              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember text-sm text-white">
+              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm text-white">
                 {index + 1}
               </span>
               <div>
@@ -305,7 +306,7 @@ export function MarketingLandingPage() {
         </h2>
         <a
           href="/signup"
-          className="mt-8 inline-block rounded-full bg-ember px-8 py-3 text-sm font-medium text-white transition hover:bg-ember-dark"
+          className="mt-8 inline-block rounded-full bg-accent px-8 py-3 text-sm font-medium text-white transition hover:bg-accent-dark"
         >
           Create your account
         </a>

@@ -3,6 +3,7 @@ import { EstateService } from "@/domain/estates/estate-service";
 import { SupabaseEstateRepository } from "@/infrastructure/estates/supabase-estate-repository";
 import { requireSession } from "@/app/api/_lib/require-session";
 import { estateErrorResponse } from "@/app/api/_lib/estate-error-response";
+import { getBrandConfig } from "@/config/get-brand-config";
 
 /**
  * The onboarding entry point (PRD v2 §3.2, US-2.1) — creates a case in
@@ -54,6 +55,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "isSelfPlanned must be a boolean if provided." }, { status: 400 });
   }
 
+  // Resolved server-side from the request, not accepted from the body —
+  // attribution data the caller has no legitimate reason to override.
+  const brand = await getBrandConfig();
+
   const service = new EstateService(new SupabaseEstateRepository(session.supabase));
   try {
     const estate = await service.createDraftCase({
@@ -63,6 +68,7 @@ export async function POST(request: Request) {
       deceasedRelationship,
       deceasedDateOfDeath: deceasedDateOfDeath as string | null | undefined,
       isSelfPlanned: isSelfPlanned as boolean | undefined,
+      acquisitionBrand: brand.brandId,
     });
     return NextResponse.json({ case: estate }, { status: 201 });
   } catch (error) {
